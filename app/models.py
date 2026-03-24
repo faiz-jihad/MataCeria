@@ -49,6 +49,17 @@ class User(Base):
     jenjang_pendidikan = Column(Enum(JenjangPendidikan), nullable=False)
     status_pekerjaan = Column(Enum(StatusPekerjaan), nullable=False)
     
+    # Data Profil & Keamanan (Sync Baru)
+    profile_image = Column(String, nullable=True) # Path to image
+    is_2fa_enabled = Column(Boolean, default=False)
+    phone_number = Column(String, nullable=True)
+
+    # Data Kesehatan Mata (Vision Data)
+    vision_concerns = Column(JSON, nullable=True) # List of concerns
+    allergies = Column(String, nullable=True)
+    medical_history = Column(Text, nullable=True)
+    vision_type = Column(String, nullable=True) # e.g. "Miopia", "Normal"
+    
     # Hak Akses (Role)
     role = Column(Enum(UserRole), default=UserRole.USER)
     
@@ -117,6 +128,7 @@ class Article(Base):
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     image_url = Column(String, nullable=True)
+    share_url = Column(String, nullable=True) # Link to web article
     category = Column(String, nullable=True, default="Umum")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 

@@ -13,6 +13,21 @@ class UserCreate(BaseModel):
     jenjang_pendidikan: str
     status_pekerjaan: str
 
+class UserUpdate(BaseModel):
+    nama_lengkap: Optional[str] = None
+    umur: Optional[int] = None
+    kelamin: Optional[str] = None
+    jenjang_pendidikan: Optional[str] = None
+    status_pekerjaan: Optional[str] = None
+    phone_number: Optional[str] = None
+    vision_concerns: Optional[List[str]] = None
+    allergies: Optional[str] = None
+    medical_history: Optional[str] = None
+    vision_type: Optional[str] = None
+
+class UserSecurityUpdate(BaseModel):
+    is_2fa_enabled: bool
+
 class UserResponse(BaseModel):
     id: int
     nama_lengkap: str
@@ -20,6 +35,13 @@ class UserResponse(BaseModel):
     umur: int
     kelamin: str
     role: str
+    profile_image: Optional[str] = None
+    is_2fa_enabled: bool = False
+    phone_number: Optional[str] = None
+    vision_concerns: Optional[List[str]] = None
+    allergies: Optional[str] = None
+    medical_history: Optional[str] = None
+    vision_type: Optional[str] = None
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -41,6 +63,7 @@ class ArticleResponse(BaseModel):
     title: str
     content: str
     imageUrl: Optional[str] = Field(None, alias="image_url")
+    shareUrl: Optional[str] = Field(None, alias="share_url")
     category: Optional[str] = "Tips Kesehatan"
     date: str # Terformat untuk Flutter (e.g. "24 Mar 2026")
 
@@ -124,3 +147,29 @@ class ResetPasswordRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
+
+# --- REFRACTION TEST SCHEMAS ---
+class RefractionDeviceInfo(BaseModel):
+    screen_ppi: float
+    screen_width_px: int
+
+class RefractionRawData(BaseModel):
+    avg_distance_cm: float
+    smallest_row_read: int
+    missed_chars: int
+
+class RefractionTestRequest(BaseModel):
+    user_id: str
+    test_type: str
+    device_info: RefractionDeviceInfo
+    raw_data: RefractionRawData
+
+class RefractionTestResult(BaseModel):
+    visual_acuity: str
+    snellen_decimal: float
+    category: str
+    recommendation: str
+
+class RefractionTestResponse(BaseModel):
+    status: str
+    results: RefractionTestResult

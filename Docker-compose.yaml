@@ -27,6 +27,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_refraksi
+    restart: always
+    command: tunnel --url http://api:8000
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
   uploads_data:

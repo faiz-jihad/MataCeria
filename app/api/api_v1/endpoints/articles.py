@@ -25,6 +25,7 @@ async def get_articles(db: Session = Depends(get_db)):
             "id": art.id,
             "title": art.title,
             "imageUrl": art.image_url,
+            "share_url": art.share_url, # New field
             "category": art.category or "Edukasi",
             "date": format_indo_date(art.created_at),
             "content": art.content
