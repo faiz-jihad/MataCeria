@@ -1,61 +1,84 @@
-# Eye Refraksi - Aplikasi Deteksi Refraksi Mata
+# 👁️ Eye Refraksi - Smart Eye Health Assistant
 
-**Eye Refraksi** adalah aplikasi Flutter yang dirancang untuk membantu pengguna melakukan deteksi dini masalah refraksi mata, memantau kesehatan mata lewat analitik, dan berkonsultasi melalui fitur chat.
+[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev/)
+[![Material 3](https://img.shields.io/badge/Material--3-6750A4?style=for-the-badge&logo=material-design&logoColor=white)](https://m3.material.io/)
 
-## 🚀 Fitur Utama
+**Eye Refraksi** adalah aplikasi cerdas berbasis mobile yang dirancang untuk memberikan solusi kesehatan mata preventif. Dengan integrasi AI, aplikasi ini mempermudah deteksi dini masalah refraksi (Miopia) dan memberikan edukasi kesehatan mata yang dipersonalisasi.
 
--   **Deteksi Refraksi Mata**: Menggunakan kamera untuk melakukan pengecekan awal kondisi mata.
--   **Dashboard Analitik**: Visualisasi data kesehatan mata dan riwayat prediksi.
--   **Chat & Konsultasi**: Fitur pesan untuk berinteraksi dengan sistem atau tenaga ahli.
--   **Artikel Kesehatan**: Edukasi mengenai kesehatan mata dan tips perawatan.
--   **Manajemen Pengguna**: Sistem autentikasi (Login/Register) yang aman.
--   **Pengingat Istirahat Mata**: Fitur untuk membantu pengguna menjaga kesehatan mata saat menggunakan gadget.
+---
 
-## 🛠️ Tech Stack
+## ✨ Fitur Unggulan
 
--   **Framework**: Flutter (Dart)
--   **State Management**: Provider
--   **Networking**: Dio & Http
--   **Storage**: Shared Preferences
--   **Font**: Google Fonts (GoogleSans)
--   **Utilities**: Flutter Dotenv, Permission Handler, Camera, Image Picker.
+> [!TIP]
+> **Deteksi Refraksi Pintar**
+> Gunakan kamera ponsel Anda untuk melakukan pemindaian awal kondisi mata dengan teknologi Computer Vision.
 
-## ⚙️ Persyaratan Sistem & Konfigurasi
+-   📊 **Dashboard Analitik**: Pantau tren kesehatan mata Anda melalui grafik interaktif dan riwayat pemeriksaan.
+-   💬 **AI Consultant Chat**: Konsultasi instan dengan asisten AI mengenai gejala atau tips perawatan mata.
+-   📖 **Katalog Artikel**: Baca berbagai konten edukasi yang terkurasi mengenai pencegahan dan penanganan masalah mata.
+-   🚨 **Kontak Darurat**: Akses cepat ke database Rumah Sakit Mata terdekat di seluruh Indonesia.
+-   ⏱️ **Eye Rest Timer**: Fitur cerdas untuk mengingatkan Anda beristirahat saat terlalu lama menatap layar.
 
-Proyek ini menggunakan konfigurasi Gradle terbaru untuk mendukung fitur Android terkini.
+---
 
--   **Flutter SDK**: ^3.9.2
--   **Java/JDK**: v17 atau lebih tinggi (disarankan Java 24 untuk performa optimal di sistem ini).
--   **Gradle**: 8.11.1
--   **Android Gradle Plugin (AGP)**: 8.9.1
+## 🛠️ Tech Stack & Arsitektur
 
-## 🏃 Cara Menjalankan Proyek
+### Core Framework
+| Komponen | Teknologi |
+| :--- | :--- |
+| **UI Framework** | Flutter (Material 3) |
+| **Bahasa** | Dart |
+| **State Management** | Provider |
+| **Networking** | Dio & Http Client |
 
-### 1. Persiapan
-Pastikan semua dependensi terpasang:
+### Utilities
+- **Camera API**: Untuk pengambilan gambar presisi tinggi.
+- **Shared Preferences**: Penyimpanan lokal yang efisien.
+- **Google Fonts**: Tipografi modern menggunakan *GoogleSans*.
+
+---
+
+## ⚙️ Persyaratan Sistem
+
+Untuk memastikan proses build berjalan lancar, pastikan lingkungan pengembangan Anda sesuai dengan spesifikasi berikut:
+
+- **Flutter SDK**: `^3.9.2`
+- **Java/JDK**: Version `17+` (Disarankan Java 24 pada sistem Windows)
+- **Gradle**: `8.11.1`
+- **Android Gradle Plugin**: `8.9.1`
+
+---
+
+## 🚀 Cara Memulai
+
+### 1. Kloning Repositori
+```bash
+git clone -b frontend https://github.com/faiz-jihad/MataCeria.git
+```
+
+### 2. Instal Dependensi
 ```bash
 flutter pub get
 ```
 
-### 2. Menjalankan Mode Debug
-Untuk menjalankan aplikasi di perangkat yang terhubung:
+### 3. Jalankan Aplikasi
 ```bash
+# Debug Mode
 flutter run
-```
 
-### 3. Menjalankan Mode Release
-Jika ingin mencoba performa maksimal (tanpa debugging):
-```bash
+# Release Mode (Performansi Terbaik)
 flutter run --release
 ```
 
-## 🔧 Troubleshooting
+---
 
-Jika Anda menghadapi masalah saat melakukan build (terutama di Android), pastikan hal-hal berikut:
+## 🔧 Panduan Troubleshooting
 
-1.  **Versi Gradle**: Pastikan `android/gradle/wrapper/gradle-wrapper.properties` menggunakan `gradle-8.11.1-all.zip`.
-2.  **Versi AGP**: Pastikan `android/settings.gradle.kts` menggunakan plugin version `8.9.1`.
-3.  **Conflict Process**: Jika build terasa lama atau membeku, pastikan tidak ada proses `java.exe` yang menggantung di Background.
+> [!WARNING]
+> Jika Anda menemui error saat build Android, periksa file konfigurasi berikut:
+> 1. `android/gradle/wrapper/gradle-wrapper.properties` -> Gunakan `gradle-8.11.1-all.zip`
+> 2. `android/settings.gradle.kts` -> Gunakan `id("com.android.application") version "8.9.1"`
 
 ---
-*Dibuat untuk portofolio pengembangan aplikasi kesehatan digital.*
+*Dikembangkan dengan ❤️ untuk mendukung kesehatan mata masyarakat Indonesia.*
