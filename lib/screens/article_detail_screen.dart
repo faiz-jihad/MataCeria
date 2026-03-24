@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ArticleDetailScreen extends StatelessWidget {
   final Map<String, dynamic> article;
@@ -97,10 +98,19 @@ class ArticleDetailScreen extends StatelessWidget {
         ),
         child: ElevatedButton.icon(
           onPressed: () {
-            // Placeholder share logic
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Feature coming soon!')),
-            );
+            final String shareText = 'Baca artikel kesehatan mata menarik dari MataCeria: '
+                '${article['title']}\n\n'
+                '${article['content']?.toString().substring(0, 100)}...';
+            
+            Clipboard.setData(ClipboardData(text: shareText)).then((_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Teks artikel berhasil disalin ke clipboard!'),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            });
           },
           icon: const Icon(Icons.share),
           label: const Text('Bagikan Artikel'),

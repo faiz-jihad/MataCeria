@@ -9,7 +9,8 @@ import '../providers/eye_refraction_provider.dart';
 import '../services/api_service.dart';
 import '../models/user_model.dart';
 import '../providers/eye_rest_provider.dart';
-
+import '../providers/language_provider.dart';
+import '../l10n/app_strings.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -208,6 +209,17 @@ class _ProfileTabState extends State<ProfileTab>
     }
   }
 
+  Widget _buildDecorativeCircle(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -230,50 +242,42 @@ class _ProfileTabState extends State<ProfileTab>
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
+                      stops: [0.0, 0.5, 1.0],
                       colors: [
-                        Color(0xFF2563EB), // Blue 600
-                        Color(0xFF3B82F6), // Blue 500
-                        Color(0xFF10B981), // Emerald 500
+                        Color(0xFF2E5BFF), // Deep Blue
+                        Color(0xFF3B82F6), // Azure Blue
+                        Color(0xFF10B981), // Emerald
                       ],
                     ),
                   ),
                   child: Stack(
                     children: [
-                      // Animated background patterns
+                      // Abstract Decorative Elements
                       Positioned(
-                        top: -50,
+                        top: -100,
                         right: -50,
-                        child: Container(
-                          width: 200,
-                          height: 200,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.1),
-                          ),
-                        ),
+                        child: _buildDecorativeCircle(300, Colors.white.withOpacity(0.08)),
                       ),
                       Positioned(
-                        bottom: -30,
-                        left: -30,
-                        child: Container(
-                          width: 150,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.05),
-                          ),
-                        ),
+                        top: 20,
+                        left: -40,
+                        child: _buildDecorativeCircle(120, Colors.white.withOpacity(0.05)),
+                      ),
+                      Positioned(
+                        bottom: 40,
+                        right: 20,
+                        child: _buildDecorativeCircle(80, Colors.white.withOpacity(0.03)),
                       ),
                       // Profile content
                       SafeArea(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Spacer(),
+                            const Spacer(flex: 2),
                             _buildModernProfileHeader(user),
-                            const Spacer(),
+                            const Spacer(flex: 1),
                             _buildModernStatsRow(user, mlProvider),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
@@ -362,56 +366,83 @@ class _ProfileTabState extends State<ProfileTab>
     return Column(
       children: [
         Stack(
+          alignment: Alignment.center,
           children: [
+            // Decorative Outer Ring
+            Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 2,
+                ),
+              ),
+            ),
+            // Avatar Container
             Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 20,
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 25,
                     spreadRadius: 2,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
               child: CircleAvatar(
-                radius: 55,
+                radius: 58,
                 backgroundColor: Colors.white,
-                backgroundImage: _imageFile != null
-                    ? FileImage(_imageFile!)
-                    : null,
-                child: _imageFile == null
-                    ? Text(
-                        user?.name.isNotEmpty == true
-                            ? user!.name[0].toUpperCase()
-                            : 'U',
-                        style: const TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2563EB),
-                        ),
-                      )
-                    : null,
+                child: CircleAvatar(
+                  radius: 55,
+                  backgroundColor: const Color(0xFFF1F5F9),
+                  backgroundImage: _imageFile != null
+                      ? FileImage(_imageFile!)
+                      : null,
+                  child: _imageFile == null
+                      ? Text(
+                          user?.name.isNotEmpty == true
+                              ? user!.name[0].toUpperCase()
+                              : 'U',
+                          style: const TextStyle(
+                              fontSize: 44,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF2563EB),
+                              letterSpacing: -2),
+                        )
+                      : null,
+                ),
               ),
             ),
+            // Camera Edit Button
             Positioned(
-              bottom: 0,
-              right: 0,
+              bottom: 4,
+              right: 4,
               child: GestureDetector(
                 onTap: () => _showChangePhotoDialog(),
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF2563EB), Color(0xFF10B981)],
+                      colors: [Color(0xFF2563EB), Color(0xFF1E40AF)],
                     ),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: const Icon(
-                    Icons.camera_alt,
+                    Icons.camera_enhance,
                     color: Colors.white,
-                    size: 20,
+                    size: 18,
                   ),
                 ),
               ),
@@ -497,31 +528,56 @@ class _ProfileTabState extends State<ProfileTab>
     final totalDetections = user?.totalDetections ?? 0;
     final totalConsultations = user?.totalConsultations ?? 0;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.max,
         children: [
           _buildModernStatItem(
             value: '$totalDetections',
             label: 'Detections',
-            icon: Icons.visibility_outlined,
+            icon: Icons.analytics_outlined,
             color: Colors.white,
           ),
-          Container(width: 1, height: 40, color: Colors.white.withOpacity(0.3)),
+          _buildVerticalDivider(),
           _buildModernStatItem(
             value: '$totalConsultations',
-            label: 'Consultations',
-            icon: Icons.chat_outlined,
+            label: 'Consults',
+            icon: Icons.forum_outlined,
             color: Colors.white,
           ),
-          Container(width: 1, height: 40, color: Colors.white.withOpacity(0.3)),
+          _buildVerticalDivider(),
           _buildModernStatItem(
             value: mlProvider.serviceHealthy ? 'Online' : 'Offline',
-            label: 'AI Status',
-            icon: Icons.auto_awesome,
-            color: mlProvider.serviceHealthy ? const Color(0xFF10B981) : Colors.white70,
+            label: 'AI Core',
+            icon: Icons.auto_awesome_outlined,
+            color: mlProvider.serviceHealthy ? const Color(0xFF34D399) : Colors.white70,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(
+      width: 1,
+      height: 24,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withOpacity(0.0),
+            Colors.white.withOpacity(0.3),
+            Colors.white.withOpacity(0.0),
+          ],
+        ),
       ),
     );
   }
@@ -535,19 +591,29 @@ class _ProfileTabState extends State<ProfileTab>
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 4),
+          Icon(icon, color: color.withOpacity(0.9), size: 18),
+          const SizedBox(height: 6),
           Text(
             value,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
               color: Colors.white,
+              letterSpacing: -0.5,
             ),
           ),
           Text(
-            label,
-            style: TextStyle(fontSize: 11, color: color.withOpacity(0.8)),
+            label.toUpperCase(),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: Colors.white.withOpacity(0.7),
+              letterSpacing: 1.0,
+            ),
           ),
         ],
       ),
@@ -707,12 +773,12 @@ class _ProfileTabState extends State<ProfileTab>
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: const Color(0xFF2563EB).withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -720,7 +786,7 @@ class _ProfileTabState extends State<ProfileTab>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: gradientColors,
@@ -728,35 +794,59 @@ class _ProfileTabState extends State<ProfileTab>
                 end: Alignment.bottomRight,
               ),
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
+                top: Radius.circular(32),
               ),
             ),
             child: Row(
               children: [
-                Icon(icon, color: Colors.white, size: 24),
-                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 16),
                 Text(
                   title,
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
+                    letterSpacing: 0.5,
                   ),
                 ),
                 const Spacer(),
                 if (_isEditing)
-                  TextButton.icon(
-                    onPressed: _updateProfile,
-                    icon: const Icon(Icons.save, size: 18, color: Colors.white),
-                    label: const Text(
-                      'Save',
-                      style: TextStyle(color: Colors.white),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _updateProfile,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.save_rounded, size: 16, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text(
+                              'Save',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
               ],
             ),
           ),
-          Padding(padding: const EdgeInsets.all(20), child: child),
+          Padding(padding: const EdgeInsets.all(24), child: child),
         ],
       ),
     );
@@ -773,29 +863,34 @@ class _ProfileTabState extends State<ProfileTab>
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B),
+            letterSpacing: 0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         _isEditing
             ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: value,
                     isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
                     items: items.map((String item) {
                       return DropdownMenuItem(
                         value: item,
-                        child: Text(item, style: const TextStyle(fontSize: 14)),
+                        child: Text(
+                          item,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                        ),
                       );
                     }).toList(),
                     onChanged: onChanged,
@@ -803,21 +898,29 @@ class _ProfileTabState extends State<ProfileTab>
                 ),
               )
             : Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(value, style: const TextStyle(fontSize: 14)),
+                      child: Text(
+                        value,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF334155),
+                        ),
+                      ),
                     ),
                     Icon(
-                      Icons.lock_outline,
-                      size: 16,
-                      color: Colors.grey.shade300,
+                      Icons.lock_person_rounded,
+                      size: 18,
+                      color: Colors.blue.withOpacity(0.2),
                     ),
                   ],
                 ),
@@ -838,64 +941,74 @@ class _ProfileTabState extends State<ProfileTab>
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B),
+            letterSpacing: 0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         _isEditing
             ? TextFormField(
                 controller: controller,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   hintText: hint,
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     borderSide: const BorderSide(
-                      color: Color(0xFF10B981),
+                      color: Color(0xFF2563EB),
                       width: 2,
                     ),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                    horizontal: 18,
+                    vertical: 16,
                   ),
                 ),
                 keyboardType: keyboardType,
                 maxLines: maxLines,
               )
             : Container(
+                width: double.infinity,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                  horizontal: 18,
+                  vertical: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
                         controller.text.isEmpty ? '-' : controller.text,
-                        style: const TextStyle(fontSize: 14),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF334155),
+                        ),
                       ),
                     ),
                     if (!_isEditing)
                       Icon(
-                        Icons.edit_outlined,
-                        size: 18,
-                        color: Colors.grey.shade400,
+                        Icons.edit_note_rounded,
+                        size: 20,
+                        color: Colors.blue.withOpacity(0.4),
                       ),
                   ],
                 ),
@@ -914,26 +1027,41 @@ class _ProfileTabState extends State<ProfileTab>
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B),
+            letterSpacing: 0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: Colors.grey.shade500),
-              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: const Color(0xFF64748B)),
+              ),
+              const SizedBox(width: 14),
               Expanded(
-                child: Text(value, style: const TextStyle(fontSize: 14)),
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF334155),
+                  ),
+                ),
               ),
             ],
           ),
@@ -952,16 +1080,17 @@ class _ProfileTabState extends State<ProfileTab>
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B),
+            letterSpacing: 0.3,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 10,
+          runSpacing: 10,
           children: options.map((option) {
             final isSelected = selected.contains(option);
             return FilterChip(
@@ -978,32 +1107,29 @@ class _ProfileTabState extends State<ProfileTab>
                       });
                     }
                   : null,
-              backgroundColor: Colors.grey.shade50,
-              selectedColor: const Color(0xFF6366F1).withOpacity(0.1),
-              checkmarkColor: const Color(0xFF6366F1),
+              backgroundColor: const Color(0xFFF1F5F9),
+              selectedColor: const Color(0xFF2563EB).withOpacity(0.1),
+              checkmarkColor: const Color(0xFF2563EB),
               labelStyle: TextStyle(
                 color: isSelected
-                    ? const Color(0xFF6366F1)
-                    : Colors.grey.shade700,
+                    ? const Color(0xFF2563EB)
+                    : const Color(0xFF64748B),
                 fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
-              side: BorderSide(
-                color: isSelected
-                    ? const Color(0xFF6366F1)
-                    : Colors.grey.shade300,
-                width: 1,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(
+                  color: isSelected
+                      ? const Color(0xFF2563EB)
+                      : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
               ),
             );
           }).toList(),
         ),
-        if (!_isEditing && selected.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              '-',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-            ),
-          ),
       ],
     );
   }
@@ -1207,59 +1333,53 @@ class _ProfileTabState extends State<ProfileTab>
   // ==================== MODERN SETTINGS TAB ====================
   Widget _buildModernSettingsTab() {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       children: [
-        _buildModernSettingSection('Preferences', [
+        _buildModernSettingSection('prof_preferences'.tr(context), [
           _buildModernSettingTile(
-            icon: Icons.notifications_outlined,
-            title: 'Notifications',
-            subtitle: 'Receive app notifications',
+            icon: Icons.notifications_active_outlined,
+            title: 'prof_notifications'.tr(context),
+            subtitle: 'Manage app alerts',
             color: const Color(0xFF6366F1),
             trailing: Switch(
               value: _notificationsEnabled,
               onChanged: (value) async {
                 setState(() => _notificationsEnabled = value);
                 await _saveSettings();
-                _showSuccessSnackBar(
-                  'Notifications ${value ? 'enabled' : 'disabled'}',
-                );
               },
               activeColor: const Color(0xFF6366F1),
             ),
           ),
           _buildModernSettingTile(
-            icon: Icons.language_outlined,
-            title: 'Language',
-            subtitle: _selectedLanguage,
+            icon: Icons.translate_rounded,
+            title: 'prof_language'.tr(context),
+            subtitle: Provider.of<LanguageProvider>(context).currentLanguage == 'id' ? 'Indonesia' : 'English',
             color: const Color(0xFF10B981),
             onTap: () => _showModernLanguageDialog(),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+            trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
           ),
           _buildModernSettingTile(
-            icon: Icons.dark_mode_outlined,
-            title: 'Dark Mode',
-            subtitle: _darkModeEnabled ? 'On' : 'Off',
+            icon: Icons.dark_mode_rounded,
+            title: 'prof_dark_mode'.tr(context),
+            subtitle: _darkModeEnabled ? 'Always On' : 'Adaptive',
             color: const Color(0xFF8B5CF6),
             trailing: Switch(
               value: _darkModeEnabled,
               onChanged: (value) async {
                 setState(() => _darkModeEnabled = value);
                 await _saveSettings();
-                _showSuccessSnackBar(
-                  'Dark mode ${value ? 'enabled' : 'disabled'}',
-                );
               },
               activeColor: const Color(0xFF8B5CF6),
             ),
           ),
         ]),
-        const SizedBox(height: 20),
-        _buildModernSettingSection('Eye Health', [
+        const SizedBox(height: 24),
+        _buildModernSettingSection('prof_eye_health'.tr(context), [
           Consumer<EyeRestProvider>(
             builder: (context, eyeRest, child) => _buildModernSettingTile(
-              icon: Icons.remove_red_eye_outlined,
-              title: 'Eye Rest Reminders',
-              subtitle: 'Remind me to take a break',
+              icon: Icons.remove_red_eye_rounded,
+              title: 'prof_rest_reminders'.tr(context),
+              subtitle: 'Prevent eye strain',
               color: const Color(0xFF2563EB),
               trailing: Switch(
                 value: eyeRest.isEnabled,
@@ -1270,99 +1390,65 @@ class _ProfileTabState extends State<ProfileTab>
           ),
           Consumer<EyeRestProvider>(
             builder: (context, eyeRest, child) => _buildModernSettingTile(
-              icon: Icons.timer_outlined,
-              title: 'Reminder Interval',
-              subtitle: '${eyeRest.reminderIntervalMinutes} minutes',
-              color: const Color(0xFF10B981),
+              icon: Icons.hourglass_empty_rounded,
+              title: 'prof_interval'.tr(context),
+              subtitle: '${eyeRest.reminderIntervalMinutes} mins',
+              color: const Color(0xFF0D9488),
               onTap: eyeRest.isEnabled ? () => _showEyeRestIntervalDialog(context, eyeRest) : null,
-              trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+              trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
             ),
           ),
         ]),
-        const SizedBox(height: 20),
-        _buildModernSettingSection('Security', [
+        const SizedBox(height: 24),
+        _buildModernSettingSection('prof_security'.tr(context), [
           _buildModernSettingTile(
-            icon: Icons.lock_outline,
-            title: 'Change Password',
-            subtitle: 'Update your password',
+            icon: Icons.key_rounded,
+            title: 'prof_password'.tr(context),
+            subtitle: 'Secure your account',
             color: const Color(0xFFEF4444),
             onTap: () => _showModernChangePasswordDialog(context),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+            trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
           ),
           _buildModernSettingTile(
-            icon: Icons.security_outlined,
-            title: 'Two-Factor Authentication',
-            subtitle: _twoFactorEnabled ? 'Enabled' : 'Disabled',
+            icon: Icons.verified_user_rounded,
+            title: 'prof_2fa'.tr(context),
+            subtitle: _twoFactorEnabled ? 'Active' : 'Not setup',
             color: const Color(0xFFF59E0B),
             trailing: Switch(
               value: _twoFactorEnabled,
               onChanged: (value) async {
                 setState(() => _twoFactorEnabled = value);
                 await _saveSettings();
+                // TODO: Sync this state with backend via User model update
                 _showModernTwoFactorDialog(value);
               },
               activeColor: const Color(0xFFF59E0B),
             ),
           ),
-          _buildModernSettingTile(
-            icon: Icons.privacy_tip_outlined,
-            title: 'Privacy Policy',
-            subtitle: 'Read our privacy policy',
-            color: const Color(0xFF06B6D4),
-            onTap: () => _showModernPrivacyPolicyDialog(),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-          ),
         ]),
-        const SizedBox(height: 20),
-        _buildModernSettingSection('Support', [
-          _buildModernSettingTile(
-            icon: Icons.help_outline,
-            title: 'Help Center',
-            subtitle: 'FAQs and guides',
-            color: const Color(0xFF8B5CF6),
-            onTap: () => _showModernHelpCenterDialog(),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-          ),
-          _buildModernSettingTile(
-            icon: Icons.chat_outlined,
-            title: 'Contact Us',
-            subtitle: 'Chat with support team',
-            color: const Color(0xFF10B981),
-            onTap: () => _showModernContactUsDialog(),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-          ),
-          _buildModernSettingTile(
-            icon: Icons.info_outline,
-            title: 'About',
-            subtitle: 'Version 1.0.0',
-            color: const Color(0xFF6B7280),
-            onTap: () => _showModernAboutDialog(),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-          ),
-        ]),
-        const SizedBox(height: 30),
+        const SizedBox(height: 32),
         Container(
           width: double.infinity,
+          height: 60,
           child: ElevatedButton.icon(
             onPressed: () => _showLogoutDialog(
               context,
               Provider.of<AuthProvider>(context, listen: false),
             ),
-            icon: const Icon(Icons.logout, size: 20),
-            label: const Text('Log Out', style: TextStyle(fontSize: 16)),
+            icon: const Icon(Icons.logout_rounded, size: 20),
+            label: Text('prof_logout'.tr(context), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: const Color(0xFFFEF2F2),
               foregroundColor: const Color(0xFFEF4444),
-              padding: const EdgeInsets.symmetric(vertical: 16),
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0xFFEF4444)),
+                borderRadius: BorderRadius.circular(20),
+                side: const BorderSide(color: Color(0xFFFEE2E2), width: 1.5),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 48),
       ],
     );
   }
@@ -1372,30 +1458,50 @@ class _ProfileTabState extends State<ProfileTab>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
           child: Text(
-            title,
+            title.toUpperCase(),
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
-              letterSpacing: 0.5,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Colors.blueGrey.shade400,
+              letterSpacing: 1.5,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: Column(children: children),
+          child: Column(
+            children: children.asMap().entries.map((entry) {
+              final index = entry.key;
+              final child = entry.value;
+              final isLast = index == children.length - 1;
+              return Column(
+                children: [
+                  child,
+                  if (!isLast)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 64),
+                      child: Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Colors.grey.shade50,
+                      ),
+                    ),
+                ],
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -1406,53 +1512,78 @@ class _ProfileTabState extends State<ProfileTab>
     required String title,
     required String subtitle,
     required Color color,
-    VoidCallback? onTap,
     Widget? trailing,
+    VoidCallback? onTap,
   }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, color: color, size: 20),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-      ),
-      trailing: trailing,
+    return InkWell(
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blueGrey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) trailing,
+          ],
+        ),
+      ),
     );
   }
 
   void _showEyeRestIntervalDialog(BuildContext context, EyeRestProvider provider) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Set Reminder Interval',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
             ...[10, 15, 20, 30, 45, 60].map((mins) => ListTile(
-                  title: Text('$mins minutes'),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  title: Text('$mins minutes', style: const TextStyle(fontWeight: FontWeight.w600)),
                   trailing: provider.reminderIntervalMinutes == mins
-                      ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                      ? const Icon(Icons.check_circle_rounded, color: Color(0xFF2563EB))
                       : null,
                   onTap: () {
                     provider.setInterval(mins);
@@ -1465,33 +1596,33 @@ class _ProfileTabState extends State<ProfileTab>
     );
   }
 
-  // Modern Dialog Methods
   void _showModernLanguageDialog() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Select Language',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
             ..._languages.map((lang) {
               return RadioListTile<String>(
-                title: Text(lang),
+                title: Text(lang, style: const TextStyle(fontWeight: FontWeight.w600)),
                 value: lang,
-                groupValue: _selectedLanguage,
+                groupValue: Provider.of<LanguageProvider>(context, listen: false).currentLanguage == 'id' ? 'Indonesia' : 'English',
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 onChanged: (value) async {
-                  setState(() => _selectedLanguage = value!);
+                  final code = value == 'English' ? 'en' : 'id';
+                  await Provider.of<LanguageProvider>(context, listen: false).setLanguage(code);
                   Navigator.pop(context);
-                  await _saveSettings();
                   _showSuccessSnackBar('Language changed to $value');
                 },
                 activeColor: const Color(0xFF6366F1),
@@ -1513,17 +1644,17 @@ class _ProfileTabState extends State<ProfileTab>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(32),
       ),
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return Container(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-              left: 20,
-              right: 20,
-              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              left: 24,
+              right: 24,
+              top: 24,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1531,48 +1662,30 @@ class _ProfileTabState extends State<ProfileTab>
               children: [
                 const Text(
                   'Change Password',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: oldPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Current Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: newPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'New Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: confirmPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 24),
+                _buildDialogField(
+                  controller: oldPasswordController,
+                  label: 'Current Password',
+                  icon: Icons.lock_outline_rounded,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogField(
+                  controller: newPasswordController,
+                  label: 'New Password',
+                  icon: Icons.vpn_key_outlined,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogField(
+                  controller: confirmPasswordController,
+                  label: 'Confirm New Password',
+                  icon: Icons.verified_user_outlined,
+                ),
+                const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
+                  height: 56,
                   child: isSubmitting
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
@@ -1613,7 +1726,7 @@ class _ProfileTabState extends State<ProfileTab>
                             if (success && mounted) {
                               Navigator.pop(context);
                               _showSuccessSnackBar(
-                                'Password changed successfully!',
+                                'Password updated successfully!',
                               );
                             } else if (mounted) {
                               _showErrorSnackBar(
@@ -1624,14 +1737,15 @@ class _ProfileTabState extends State<ProfileTab>
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF6366F1),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: const Text('Update Password'),
+                          child: const Text('Update Password', style: TextStyle(fontWeight: FontWeight.w700)),
                         ),
                 ),
-                const SizedBox(height: 12),
               ],
             ),
           );
@@ -1640,60 +1754,26 @@ class _ProfileTabState extends State<ProfileTab>
     );
   }
 
-  void _showModernPrivacyPolicyDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Privacy Policy',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Your privacy is important to us. This privacy policy explains how we collect, use, and protect your information.',
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Information We Collect:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                '• User profile data\n• Eye detection history\n• Consultation records\n• Device information',
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'How We Use Your Information:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                '• Provide eye refraction services\n• Improve AI accuracy\n• Personalize recommendations\n• Customer support',
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
-          ),
+  Widget _buildDialogField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: const Color(0xFF6366F1), size: 20),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
       ),
     );
@@ -1703,42 +1783,47 @@ class _ProfileTabState extends State<ProfileTab>
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                enabled ? Icons.security : Icons.security_outlined,
-                size: 60,
-                color: enabled
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFFF59E0B),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: (enabled ? const Color(0xFF10B981) : const Color(0xFFF59E0B)).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  enabled ? Icons.verified_user_rounded : Icons.warning_amber_rounded,
+                  size: 40,
+                  color: enabled ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Text(
                 enabled ? 'Enable 2FA?' : 'Disable 2FA?',
                 style: const TextStyle(
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 enabled
-                    ? 'Two-factor authentication adds an extra layer of security to your account.'
-                    : 'Are you sure you want to disable two-factor authentication? Your account will be less secure.',
+                    ? 'Adds an extra layer of security to your account with verification codes.'
+                    : 'Disabling 2FA makes your account more vulnerable. Are you sure you want to proceed?',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600),
+                style: TextStyle(color: Colors.blueGrey.shade600, fontSize: 13, height: 1.5),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               Row(
                 children: [
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text('Cancel', style: TextStyle(color: Colors.blueGrey.shade400, fontWeight: FontWeight.w700)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1754,14 +1839,14 @@ class _ProfileTabState extends State<ProfileTab>
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: enabled
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFEF4444),
+                        backgroundColor: enabled ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text(enabled ? 'Enable' : 'Disable'),
+                      child: Text(enabled ? 'Enable' : 'Disable', style: const TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],
@@ -1773,235 +1858,10 @@ class _ProfileTabState extends State<ProfileTab>
     );
   }
 
-  void _showModernHelpCenterDialog() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Help Center',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _buildModernHelpItem(
-              icon: Icons.help_outline,
-              title: 'Frequently Asked Questions',
-              subtitle: 'Find answers to common questions',
-              color: const Color(0xFF6366F1),
-              onTap: () {
-                Navigator.pop(context);
-                _showSuccessSnackBar('Opening FAQ');
-              },
-            ),
-            _buildModernHelpItem(
-              icon: Icons.video_library_outlined,
-              title: 'Video Tutorials',
-              subtitle: 'Watch step-by-step guides',
-              color: const Color(0xFFEF4444),
-              onTap: () {
-                Navigator.pop(context);
-                _showSuccessSnackBar('Opening tutorials');
-              },
-            ),
-            _buildModernHelpItem(
-              icon: Icons.article_outlined,
-              title: 'User Guide',
-              subtitle: 'Read detailed documentation',
-              color: const Color(0xFF10B981),
-              onTap: () {
-                Navigator.pop(context);
-                _showSuccessSnackBar('Opening user guide');
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernHelpItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, color: color, size: 24),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: onTap,
-    );
-  }
-
-  void _showModernContactUsDialog() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Contact Us',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _buildModernContactItem(
-              icon: Icons.email_outlined,
-              title: 'Email',
-              subtitle: 'support@eyerefraksi.com',
-              color: const Color(0xFF6366F1),
-              onTap: () {
-                Navigator.pop(context);
-                _showSuccessSnackBar('Opening email');
-              },
-            ),
-            _buildModernContactItem(
-              icon: Icons.phone_outlined,
-              title: 'Phone',
-              subtitle: '+62 812-3456-7890',
-              color: const Color(0xFF10B981),
-              onTap: () {
-                Navigator.pop(context);
-                _showSuccessSnackBar('Calling support');
-              },
-            ),
-            _buildModernContactItem(
-              icon: Icons.chat_outlined,
-              title: 'Live Chat',
-              subtitle: '24/7 support available',
-              color: const Color(0xFFF59E0B),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/chat');
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernContactItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, color: color, size: 24),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: onTap,
-    );
-  }
-
-  void _showModernAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2563EB), Color(0xFF10B981)],
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.medical_services,
-                  size: 48,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Eye Refraction System',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Version 1.0.0',
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'AI-powered eye refraction detection system for early diagnosis of vision disorders.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              Text(
-                '© 2025 Eye Refraction System',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showChangePhotoDialog() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SafeArea(
@@ -2080,6 +1940,10 @@ class _ProfileTabState extends State<ProfileTab>
         // Persist image path locally
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('profile_image_path', pickedFile.path);
+
+        // TODO: Implement backend upload when endpoint is ready
+        // final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        // await authProvider.uploadProfilePhoto(pickedFile);
 
         _showSuccessSnackBar('Profile photo updated successfully');
       }

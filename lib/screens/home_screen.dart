@@ -9,6 +9,7 @@ import '../providers/eye_rest_provider.dart';
 import 'home_tab.dart';
 import 'prediction_tab.dart';
 import 'profile_tab.dart';
+import '../l10n/app_strings.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -200,19 +201,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               index: 0,
               icon: Icons.grid_view_outlined,
               activeIcon: Icons.grid_view_rounded,
-              label: 'Home',
+              label: 'nav_home'.tr(context),
             ),
             _buildAnimatedNavItem(
               index: 1,
               icon: Icons.assignment_outlined,
               activeIcon: Icons.assignment_rounded,
-              label: 'Report',
+              label: 'nav_history'.tr(context),
             ),
             _buildAnimatedNavItem(
               index: 2,
               icon: Icons.person_outline,
               activeIcon: Icons.person,
-              label: 'Profile',
+              label: 'nav_profile'.tr(context),
             ),
           ],
         ),

@@ -18,6 +18,9 @@ import 'providers/eye_rest_provider.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/article_detail_screen.dart';
+import 'providers/refraction_test_provider.dart';
+import 'screens/prediction/refraction_test_screen.dart';
+import 'providers/language_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,6 +75,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => EyeRefractionProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => EyeRestProvider()),
+        ChangeNotifierProvider(create: (_) => RefractionTestProvider()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],
       child: MaterialApp(
         title: 'Eye Refraksi',
@@ -89,6 +94,7 @@ class MyApp extends StatelessWidget {
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const HomeScreen(),
           '/camera': (context) => const CameraScreen(),
+          '/refraction_test': (context) => const RefractionTestScreen(),
           '/result': (context) => const ResultScreen(),
           '/chat': (context) => const ChatScreen(),
           '/chat-history': (context) => const ChatHistoryScreen(),

@@ -6,19 +6,19 @@ class ApiConfig {
   // 1. Jika di Web: gunakan 127.0.0.1
   // 2. Jika di Emulator Android: gunakan 10.0.2.2
   // 3. Jika di HP Fisik: gunakan IP LAN Laptop/PC Anda (Contoh: 192.168.1.XX)
-  
+
   static const String _pcIP = '192.168.1.5'; // IP Laptop dari ipconfig
 
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://127.0.0.1:8000';
     } else if (Platform.isAndroid) {
-      // DEBUG HP FISIK: Gunakan _pcIP
-      return 'http://$_pcIP:8000'; 
-      // DEBUG EMULATOR: Gunakan 10.0.2.2
-      // return 'http://10.0.2.2:8000';
+      // UNTUK SHARE KE TEMAN: Gunakan URL Cloudflare agar bisa diakses internet (Public)
+      return 'https://assured-highways-auditor-headset.trycloudflare.com/';
+      // DEBUG HP FISIK (Wi-Fi Lokal): return 'http://$_pcIP:8000';
+      // DEBUG EMULATOR: return 'http://10.0.2.2:8000';
     } else {
-      return 'http://localhost:8000';
+      return 'https://assured-highways-auditor-headset.trycloudflare.com/';
     }
   }
 
@@ -29,18 +29,18 @@ class ApiConfig {
   static String get fullBaseUrl => '$baseUrl/api/$apiVersion';
 
   // ========== ENDPOINTS SESUAI MAIN.PY ==========
-  
+
   // Endpoint Autentikasi
-  static const String login = '/auth/login';       
-  static const String register = '/auth/register'; 
-  
+  static const String login = '/auth/login';
+  static const String register = '/auth/register';
+
   // Endpoint Refraksi Mata (Upload Gambar)
-  static const String uploadTest = '/refraction-test'; 
+  static const String uploadTest = '/refraction-test';
 
   // (Tambahkan endpoint lain di sini nanti jika ada fitur baru)
   static const String user = '/user/me';
   static const String logout = '/logout';
-  
+
   // Endpoint Dinamis Baru
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
@@ -59,6 +59,7 @@ class ApiConfig {
   static const String analyticsCategories = '/analytics/categories';
   static const String analyticsFrequent = '/analytics/frequent';
   static const String emergencyContacts = '/emergency/contacts';
+  static const String cameraRefractionTest = '/refraction/test';
 
   // Endpoint ML (Khusus untuk EyeRefractionService lama)
   static const String mlHealth = '/health';

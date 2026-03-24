@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../models/emergency_model.dart';
 import '../models/user_model.dart';
 import '../widgets/skeleton_loader.dart';
+import '../l10n/app_strings.dart';
 
 class HomeTab extends StatefulWidget {
   final Function(int)? onTabSelected;
@@ -519,17 +520,17 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
 
   Widget _buildServicesSection() {
     final services = [
-      {'title': 'Deteksi', 'icon': Icons.camera_alt, 'color': const Color(0xFFE0F2FE)},
-      {'title': 'Konsul', 'icon': Icons.chat_bubble, 'color': const Color(0xFFFEF3C7)},
-      {'title': 'Tips', 'icon': Icons.article, 'color': const Color(0xFFE1F5FE)},
-      {'title': 'Lokasi', 'icon': Icons.location_on, 'color': const Color(0xFFFEE2E2)},
+      {'key': 'btn_detect', 'title': 'Deteksi', 'icon': Icons.camera_alt, 'color': const Color(0xFFE0F2FE)},
+      {'key': 'btn_consult', 'title': 'Konsul', 'icon': Icons.chat_bubble, 'color': const Color(0xFFFEF3C7)},
+      {'key': 'btn_tips', 'title': 'Tips', 'icon': Icons.article, 'color': const Color(0xFFE1F5FE)},
+      {'key': 'btn_location', 'title': 'Lokasi', 'icon': Icons.location_on, 'color': const Color(0xFFFEE2E2)},
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Services',
+        Text(
+          'services_title'.tr(context),
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
@@ -545,7 +546,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () {
-                          if (s['title'] == 'Deteksi') Navigator.pushNamed(context, '/camera');
+                          if (s['title'] == 'Deteksi') Navigator.pushNamed(context, '/refraction_test');
                           if (s['title'] == 'Konsul') Navigator.pushNamed(context, '/chat');
                           if (s['title'] == 'Tips') _showArticlesSheet(context);
                           if (s['title'] == 'Lokasi') _showAllContacts(context);
@@ -589,7 +590,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  s['title'] as String,
+                  (s['key'] as String).tr(context),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade700,

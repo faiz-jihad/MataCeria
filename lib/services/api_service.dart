@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -349,12 +350,49 @@ class ApiService {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
-        return data.map((c) => EmergencyContact.fromJson(c)).toList();
+        if (data.isNotEmpty) {
+           return data.map((c) => EmergencyContact.fromJson(c)).toList();
+        }
       }
     } catch (_) {
-      // Failed to load analytics, return default empty state
+      // Failed to load, use fallbacks
     }
-    return [];
+
+    // Default Fallback Data (Indonesian Eye Care Centers)
+    return [
+      EmergencyContact(
+        id: 1,
+        name: 'JEC (Jakarta Eye Center)',
+        phone: '021-29221122',
+        address: 'Menteng, Kedoya, Bekasi, Cibubur',
+        city: 'Jakarta',
+        type: 'hospital',
+      ),
+      EmergencyContact(
+        id: 2,
+        name: 'KMN (Klinik Mata Nusantara)',
+        phone: '021-500666',
+        address: 'Kemang, Kebon Jeruk, Jakarta Selatan',
+        city: 'Jakarta',
+        type: 'clinic',
+      ),
+      EmergencyContact(
+        id: 3,
+        name: 'RS Mata Cicendo',
+        phone: '022-4231263',
+        address: 'Jl. Cicendo No.4, Pasir Kaliki',
+        city: 'Bandung',
+        type: 'hospital',
+      ),
+      EmergencyContact(
+        id: 4,
+        name: 'RS Mata Bali Mandara',
+        phone: '0361-243481',
+        address: 'Jl. Angsoka No.8, Dangin Puri',
+        city: 'Bali',
+        type: 'hospital',
+      ),
+    ];
   }
 
   // Predictions History
@@ -387,6 +425,31 @@ class ApiService {
         'created_at': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
       }
     ];
+  }
+
+  // Camera Refraction Test Result
+  Future<bool> submitRefractionResult({
+    required double avgDistanceCm,
+    required int smallestRowRead,
+    required int missedChars,
+  }) async {
+    final url = Uri.parse('${ApiConfig.fullBaseUrl}${ApiConfig.cameraRefractionTest}');
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode({
+          'avg_distance_cm': avgDistanceCm,
+          'smallest_row_read': smallestRowRead,
+          'missed_chars': missedChars,
+          'device_info': Platform.operatingSystem,
+        }),
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Error submitting refraction result: $e');
+      return false;
+    }
   }
 
   // Endpoint Lupa Password
