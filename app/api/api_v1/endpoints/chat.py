@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from app.core.ratelimit import limiter
 from sqlalchemy.orm import Session
 from typing import List
 import logging
@@ -25,13 +26,15 @@ async def get_chat_unread_count(
     return {"unread_count": count}
 
 @router.post("/send", response_model=schemas.ChatResponse)
+@limiter.limit("10/minute")
 async def chat_with_ai(
-    request: schemas.ChatRequest,
+    request: Request,
+    chat_request: schemas.ChatRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     # 1. Tentukan Session ID
-    session_id = request.session_id or str(uuid.uuid4())
+    session_id = chat_request.session_id or str(uuid.uuid4())
     
     logger.info(f"User {current_user.email} bertanya ke AI di sesi {session_id}")
     
@@ -40,9 +43,9 @@ async def chat_with_ai(
     
     # 3. Panggil Gemini
     # Kita sertakan refraction_result jika ada untuk context tambahan
-    user_query = request.message
-    if request.refraction_result:
-        user_query = f"[Hasil Tes: {request.refraction_result}] {user_query}"
+    user_query = chat_request.message
+    if chat_request.refraction_result:
+        user_query = f"[Hasil Tes: {chat_request.refraction_result}] {user_query}"
         
     reply = ai_service.get_chat_response(user_query, articles)
     
@@ -51,7 +54,7 @@ async def chat_with_ai(
         user_id=current_user.id, 
         session_id=session_id,
         role="user", 
-        message=request.message, 
+        message=chat_request.message, 
         is_read=True
     )
     
@@ -75,7 +78,7 @@ async def chat_with_ai(
     db.commit()
     db.refresh(bot_msg)
 
-    log_activity(db, current_user.id, "Chat AI", f"Bertanya: {request.message[:20]}...")
+    log_activity(db, current_user.id, "Chat AI", f"Bertanya: {chat_request.message[:20]}...")
 
     # 7. Return sesuai struktur yang diminta Flutter
     # Kita gunakan dictionary agar pydantic memproses Alias pilihan imageUrl/image_url dll

@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from app.core.security import get_current_admin
 from sqlalchemy.orm import Session
 from typing import List
 import locale
 
 from app import models, schemas
 from app.db.session import get_db
+from app.utils import create_notification
 
 router = APIRouter()
 
@@ -31,3 +33,68 @@ async def get_articles(db: Session = Depends(get_db)):
             "content": art.content
         })
     return result
+@router.post("/", response_model=schemas.ArticleResponse, status_code=status.HTTP_201_CREATED)
+async def create_article(
+    article: schemas.ArticleCreate, 
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_current_admin)
+):
+    new_article = models.Article(**article.model_dump())
+    db.add(new_article)
+    db.commit()
+    db.refresh(new_article)
+    
+    # Notifikasi ke semua user
+    users = db.query(models.User).filter(models.User.role == models.UserRole.USER).all()
+    for user in users:
+        create_notification(
+            db, 
+            user.id, 
+            "Artikel Baru! 📖", 
+            f"Admin baru saja mengunggah artikel: '{new_article.title}'. Yuk baca sekarang!"
+        )
+
+    # Transform for response
+    return {
+        **new_article.__dict__,
+        "imageUrl": new_article.image_url,
+        "date": format_indo_date(new_article.created_at)
+    }
+
+@router.put("/{article_id}", response_model=schemas.ArticleResponse)
+async def update_article(
+    article_id: int,
+    article_data: schemas.ArticleUpdate,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_current_admin)
+):
+    article = db.query(models.Article).filter(models.Article.id == article_id).first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel tidak ditemukan")
+    
+    update_data = article_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(article, key, value)
+    
+    db.commit()
+    db.refresh(article)
+    
+    return {
+        **article.__dict__,
+        "imageUrl": article.image_url,
+        "date": format_indo_date(article.created_at)
+    }
+
+@router.delete("/{article_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_article(
+    article_id: int,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_current_admin)
+):
+    article = db.query(models.Article).filter(models.Article.id == article_id).first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Artikel tidak ditemukan")
+    
+    db.delete(article)
+    db.commit()
+    return None

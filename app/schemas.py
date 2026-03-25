@@ -58,7 +58,24 @@ class RiwayatTesResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 # --- ARTICLE SCHEMAS ---
-class ArticleResponse(BaseModel):
+class ArticleBase(BaseModel):
+    title: str
+    content: str
+    image_url: Optional[str] = None
+    share_url: Optional[str] = None
+    category: Optional[str] = "Tips Kesehatan"
+
+class ArticleCreate(ArticleBase):
+    pass
+
+class ArticleUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    image_url: Optional[str] = None
+    share_url: Optional[str] = None
+    category: Optional[str] = None
+
+class ArticleResponse(ArticleBase):
     id: int
     title: str
     content: str
@@ -70,7 +87,20 @@ class ArticleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 # --- EMERGENCY SCHEMAS ---
-class EmergencyContactResponse(BaseModel):
+class EmergencyContactBase(BaseModel):
+    nama: str
+    nomor_telepon: str
+    kategori: str
+
+class EmergencyContactCreate(EmergencyContactBase):
+    pass
+
+class EmergencyContactUpdate(BaseModel):
+    nama: Optional[str] = None
+    nomor_telepon: Optional[str] = None
+    kategori: Optional[str] = None
+
+class EmergencyContactResponse(EmergencyContactBase):
     id: int
     nama: str
     nomor_telepon: str
@@ -173,3 +203,33 @@ class RefractionTestResult(BaseModel):
 class RefractionTestResponse(BaseModel):
     status: str
     results: RefractionTestResult
+
+# --- V2 AI REFRACTION API SCHEMAS ---
+class RefractionAIDeviceInfo(BaseModel):
+    screen_ppi: float
+
+class RefractionAISnellenData(BaseModel):
+    avg_distance_cm: float
+    smallest_row_read: int
+    missed_chars: int
+    response_time: float
+
+class RefractionAIImageData(BaseModel):
+    eye_frame_base64: str
+
+class RefractionAIRequest(BaseModel):
+    user_id: str
+    device_info: RefractionAIDeviceInfo
+    snellen_data: RefractionAISnellenData
+    image_data: RefractionAIImageData
+
+class RefractionAIResultDetail(BaseModel):
+    visual_acuity: str
+    snellen_decimal: float
+    predicted_class: str
+    confidence: float
+    source: str
+
+class RefractionAIResponse(BaseModel):
+    status: str
+    results: RefractionAIResultDetail

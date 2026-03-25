@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from app.core.ratelimit import limiter
 from sqlalchemy.orm import Session
 import secrets
 import logging
@@ -6,13 +7,14 @@ import logging
 from app import models, schemas
 from app.db.session import get_db
 from app.core.security import hash_password, verify_password, create_access_token
-from app.utils import log_activity
+from app.utils import log_activity, create_notification
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.post("/register", response_model=schemas.UserResponse)
-async def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register_user(request: Request, user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     logger.info(f"Mencoba registrasi user baru: {user_data.email}")
     user_exist = db.query(models.User).filter(models.User.email == user_data.email).first()
     if user_exist:
@@ -32,13 +34,20 @@ async def register_user(user_data: schemas.UserCreate, db: Session = Depends(get
     db.refresh(new_user)
     
     log_activity(db, new_user.id, "Registrasi", "User baru berhasil terdaftar")
+    create_notification(
+        db, 
+        new_user.id, 
+        "Selamat Datang! 👋", 
+        f"Halo {new_user.nama_lengkap}, selamat bergabung di MataCeria. Mari jaga kesehatan mata Anda bersama kami."
+    )
     return new_user
 
 from fastapi.security import OAuth2PasswordRequestForm
 
 @router.post("/login", response_model=schemas.Token)
+@limiter.limit("5/minute")
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):

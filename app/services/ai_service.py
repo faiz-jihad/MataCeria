@@ -16,28 +16,31 @@ generation_config = {
     "temperature": 0.7,
     "top_p": 0.95,
     "top_k": 40,
-    "max_output_tokens": 800,
+    "max_output_tokens": 2048, # Diperbesar agar jawaban tidak terpotong
 }
 
 # Inisialisasi Model (Primary & Fallbacks)
 try:
-    model_25 = genai.GenerativeModel(
-        model_name='gemini-2.5-flash',
-        generation_config=generation_config
-    )
+    # Gemini 2.0 Flash (Latest Stable/Exp for this key)
     model_20 = genai.GenerativeModel(
         model_name='gemini-2.0-flash',
         generation_config=generation_config
     )
-    model_15 = genai.GenerativeModel(
+    # Gemini 1.5 Flash (Legacy/Stable fallback)
+    model_15_flash = genai.GenerativeModel(
         model_name='gemini-1.5-flash',
+        generation_config=generation_config
+    )
+    # Gemini Flash Latest (Alternative fallback)
+    model_flash_latest = genai.GenerativeModel(
+        model_name='gemini-flash-latest',
         generation_config=generation_config
     )
 except Exception as e:
     logger.error(f"Gagal inisialisasi model Gemini: {str(e)}")
-    model_25 = None
     model_20 = None
-    model_15 = None
+    model_15_flash = None
+    model_flash_latest = None
 
 def get_chat_response(user_query: str, context_articles: list):
     """
@@ -73,31 +76,42 @@ def get_chat_response(user_query: str, context_articles: list):
     JAWABAN ASISTEN AI:
     """
 
-    # COBA 1: Gemini 2.5 Flash (Primary)
-    if model_25:
-        try:
-            logger.info("Mencoba Gemini 2.5 Flash...")
-            response = model_25.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            logger.warning(f"Gemini 2.5 gagal: {str(e)}")
-
-    # COBA 2: Gemini 2.0 Flash (Secondary)
+    # COBA 1: Gemini 2.0 Flash (Primary - Latest Available)
     if model_20:
         try:
             logger.info("Mencoba Gemini 2.0 Flash...")
             response = model_20.generate_content(prompt)
             return response.text
         except Exception as e:
+            if "finish_reason" in str(e) or "block_reason" in str(e):
+                logger.warning(f"Gemini 2.0 blocked partially: {str(e)}")
+                return "Maaf, respon terhenti karena kebijakan keamanan AI. Silakan tanyakan hal lain."
             logger.warning(f"Gemini 2.0 gagal: {str(e)}")
 
-    # COBA 3: Gemini 1.5 Flash (Final Fallback - Paling Stabil)
-    if model_15:
+    # COBA 2: Gemini 1.5 Flash (Fallback 1)
+    if model_15_flash:
         try:
-            logger.info("Mencoba Gemini 1.5 Flash (Stable Fallback)...")
-            response = model_15.generate_content(prompt)
+            logger.info("Mencoba Gemini 1.5 Flash...")
+            response = model_15_flash.generate_content(prompt)
             return response.text
         except Exception as e:
+            if "finish_reason" in str(e) or "block_reason" in str(e):
+                logger.warning(f"Gemini 1.5 blocked partially: {str(e)}")
+                return "Maaf, respon terhenti karena kebijakan keamanan AI. Silakan tanyakan hal lain."
+            logger.warning(f"Gemini 1.5 Flash gagal: {str(e)}")
+
+    # COBA 3: Gemini Flash Latest (Fallback 2)
+    if model_flash_latest:
+        try:
+            logger.info("Mencoba Gemini Flash Latest...")
+            response = model_flash_latest.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            # Jika response blocked oleh safety filter, coba ambil yang ada atau beri pesan aman
+            if "finish_reason" in str(e) or "block_reason" in str(e):
+                logger.warning(f"Gemini Flash blocked partially: {str(e)}")
+                return "Maaf, jawaban untuk pertanyaan ini dibatasi oleh kebijakan keamanan AI. Silakan tanyakan hal lain seputar kesehatan mata."
+            
             logger.error(f"Semua model Gemini gagal: {str(e)}")
             return "Maaf, saat ini seluruh server AI sedang sangat sibuk. Silakan coba lagi nanti."
 

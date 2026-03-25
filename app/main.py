@@ -4,9 +4,14 @@ import datetime
 import os
 
 from app.api.api_v1.api import api_router
+from app.api.api_v1.endpoints import refraction
+
 from app.core.config import settings
 from app.core.logging_config import setup_logging
 from app.db.base import init_db
+from app.core.ratelimit import limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 
 # Initialize Logging
 logger = setup_logging()
@@ -19,6 +24,10 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
+
+# Throttling configuration
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Request Logging Middleware
 @app.middleware("http")
@@ -40,6 +49,9 @@ app.add_middleware(
 
 # Root Routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# V2 Routers
+app.include_router(refraction.router_v2, prefix="/api/v2/refraction", tags=["Medical Refraction Test V2 (AI)"])
 
 # Health Check
 @app.get("/api/v1/health", tags=["Health"])
