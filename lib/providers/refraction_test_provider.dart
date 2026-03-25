@@ -25,6 +25,25 @@ class RefractionTestProvider with ChangeNotifier {
   double _currentDistanceCm = 0;
   double get currentDistanceCm => _currentDistanceCm;
 
+  // AI & Analytics States
+  Rect? _faceBoundingBox;
+  Rect? get faceBoundingBox => _faceBoundingBox;
+
+  double _pixelIpd = 0;
+  double get pixelIpd => _pixelIpd;
+
+  String? _aiResultCategory;
+  String? get aiResultCategory => _aiResultCategory;
+
+  double? _aiConfidence;
+  double? get aiConfidence => _aiConfidence;
+
+  bool _isProcessingAI = false;
+  bool get isProcessingAI => _isProcessingAI;
+
+  final List<double> _responseTimes = [];
+  DateTime? _lastRowShownTime;
+
   // Snellen Chart Data
   final List<SnellenRow> _snellenRows = [
     SnellenRow(distanceRef: 200, letters: 'E'),
@@ -65,6 +84,8 @@ class RefractionTestProvider with ChangeNotifier {
       final double dx = leftEyeX - rightEyeX;
       final double dy = leftEyeY - rightEyeY;
       final double pixelIpd = sqrt(dx * dx + dy * dy);
+      _pixelIpd = pixelIpd;
+      _faceBoundingBox = face.boundingBox;
 
       if (_testStatus == TestStatus.calibration) {
         // Assume user holds phone at exactly 40cm during calibration
@@ -77,6 +98,9 @@ class RefractionTestProvider with ChangeNotifier {
         _currentDistanceCm = distMm / 10.0;
         notifyListeners();
       }
+    } else {
+        _faceBoundingBox = null;
+        notifyListeners();
     }
   }
 
@@ -91,10 +115,16 @@ class RefractionTestProvider with ChangeNotifier {
     _currentRowIndex = 0;
     _missedChars = 0;
     _smallestRowRead = 200;
+    _responseTimes.clear();
+    _lastRowShownTime = DateTime.now();
     notifyListeners();
   }
 
   void submitRowResult(int errors) {
+    if (_lastRowShownTime != null) {
+      _responseTimes.add(DateTime.now().difference(_lastRowShownTime!).inMilliseconds.toDouble() / 1000.0);
+    }
+    
     _missedChars += errors;
     
     // Logic to determine if they pass the row.
@@ -105,27 +135,59 @@ class RefractionTestProvider with ChangeNotifier {
       _smallestRowRead = currentRow.distanceRef;
       if (_currentRowIndex < _snellenRows.length - 1) {
         _currentRowIndex++;
+        _lastRowShownTime = DateTime.now();
       } else {
-        _finishTest();
+        _testStatus = TestStatus.finished;
       }
     } else {
-        _finishTest();
+        _testStatus = TestStatus.finished;
     }
     notifyListeners();
   }
 
-  Future<void> _finishTest() async {
-    _testStatus = TestStatus.finished;
+  Future<void> processAIResult({
+    required String imageBase64,
+    required String deviceInfo,
+  }) async {
+    _isProcessingAI = true;
     notifyListeners();
 
     try {
-      await _apiService.submitRefractionResult(
-        avgDistanceCm: _currentDistanceCm,
-        smallestRowRead: _smallestRowRead,
-        missedChars: _missedChars,
+      final snellenData = {
+        'smallest_row_read': _smallestRowRead,
+        'missed_chars': _missedChars,
+        'avg_distance_cm': _currentDistanceCm,
+        'response_times': _responseTimes,
+      };
+
+      final result = await _apiService.postAIRefractionAI(
+        imageBase64: imageBase64,
+        snellenData: snellenData,
+        deviceInfo: deviceInfo,
       );
+
+      if (result['success']) {
+        final data = result['data'];
+        _aiResultCategory = data['kategori'] ?? 'Unknown';
+        
+        // Handle variations in API response (string '95%' or double 0.95)
+        if (data['confidence'] is String) {
+           _aiConfidence = double.tryParse(data['confidence'].replaceAll('%', '')) ?? 0.0;
+        } else if (data['confidence'] is num) {
+           _aiConfidence = (data['confidence'] as num).toDouble();
+           // if it's less than 1, it might be a probability. Convert to percentage if needed.
+           if (_aiConfidence! < 1.0) _aiConfidence = _aiConfidence! * 100;
+        } else {
+           _aiConfidence = 0.0;
+        }
+      } else {
+         _aiResultCategory = "Error: ${result['message']}";
+      }
     } catch (e) {
-      print("Failed to submit result: \$e");
+      _aiResultCategory = "Error: $e";
+    } finally {
+      _isProcessingAI = false;
+      notifyListeners();
     }
   }
 
@@ -137,6 +199,8 @@ class RefractionTestProvider with ChangeNotifier {
     _currentRowIndex = 0;
     _missedChars = 0;
     _smallestRowRead = 200;
+    _aiResultCategory = null;
+    _aiConfidence = null;
     notifyListeners();
   }
 }

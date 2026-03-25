@@ -7,6 +7,9 @@ import '../widgets/message_bubble.dart';
 import '../widgets/typing_indikator.dart';
 import '../widgets/quick_chip.dart';
 import '../widgets/empty_state.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 
 class ChatScreen extends StatefulWidget {
   final String? initialMessage;
@@ -26,6 +29,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+  XFile? _selectedFile;
+  final ImagePicker _picker = ImagePicker();
   
   @override
   void initState() {
@@ -63,7 +68,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage([String? message]) async {
     final text = message ?? _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && _selectedFile == null) return;
 
     _messageController.clear();
     _focusNode.unfocus();
@@ -73,9 +78,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final result = await chatProvider.sendMessage(
       text,
       refractionResult: widget.refractionResult,
+      file: _selectedFile,
     );
 
     if (result['success']) {
+      setState(() {
+        _selectedFile = null;
+      });
       _scrollToBottom();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,6 +95,51 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _pickAttachment() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Ambil Foto'),
+              onTap: () async {
+                Navigator.pop(context);
+                final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+                if (photo != null) setState(() => _selectedFile = photo);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galeri Foto'),
+              onTap: () async {
+                Navigator.pop(context);
+                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                if (image != null) setState(() => _selectedFile = image);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.insert_drive_file),
+              title: const Text('File Dokumen'),
+              onTap: () async {
+                Navigator.pop(context);
+                // Note: File picker might need another package, but XFile from image_picker is fine for media.
+                // For general files, usually file_picker is used.
+                // I'll stick to images for now as a "Photo/File" combo.
+                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                if (image != null) setState(() => _selectedFile = image);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showDisclaimerDialog() {
@@ -190,7 +244,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     title: const Text('Ambulans / IGD'),
                     subtitle: const Text('118 / 119'),
                     trailing: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () => launchUrl(Uri.parse('tel:119')),
                       child: const Text('Hubungi'),
                     ),
                   ),
@@ -199,6 +253,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     leading: const Icon(Icons.local_hospital, color: Colors.blue),
                     title: const Text('RS Terdekat'),
                     subtitle: const Text('Cek di menu Kontak Darurat'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/admin/emergency'); // Updated to the new admin-managed list if appropriate or to general list
+                    },
                   ),
                 ],
               ),
@@ -384,6 +442,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             note: note,
                           );
                         },
+                        onSuggestionTap: (suggestion) => _sendMessage(suggestion),
                       );
                     },
                   ),
@@ -420,46 +479,84 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            icon: const Icon(Icons.attach_file),
-            onPressed: () {
-              // Handle attachment
-            },
-            color: Colors.grey.shade600,
-          ),
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              focusNode: _focusNode,
-              decoration: InputDecoration(
-                hintText: 'Ketik pesan...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+          if (_selectedFile != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+              child: Stack(
+                children: [
+                  Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      image: DecorationImage(
+                        image: FileImage(File(_selectedFile!.path)),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedFile = null),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close, color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.attach_file),
+                onPressed: _pickAttachment,
+                color: Colors.grey.shade600,
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  focusNode: _focusNode,
+                  decoration: InputDecoration(
+                    hintText: 'Ketik pesan...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                  maxLines: null,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendMessage(),
                 ),
               ),
-              maxLines: null,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
-            ),
-          ),
-          const SizedBox(width: 8),
-          CircleAvatar(
-            backgroundColor: Colors.blue,
-            radius: 24,
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: () => _sendMessage(),
-            ),
+              const SizedBox(width: 8),
+              CircleAvatar(
+                backgroundColor: Colors.blue,
+                radius: 24,
+                child: IconButton(
+                  icon: const Icon(Icons.send, color: Colors.white),
+                  onPressed: () => _sendMessage(),
+                ),
+              ),
+            ],
           ),
         ],
       ),

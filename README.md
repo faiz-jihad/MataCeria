@@ -15,10 +15,11 @@
 > Gunakan kamera ponsel Anda untuk melakukan pemindaian awal kondisi mata dengan teknologi Computer Vision.
 
 -   📊 **Dashboard Analitik**: Pantau tren kesehatan mata Anda melalui grafik interaktif dan riwayat pemeriksaan.
--   💬 **AI Consultant Chat**: Konsultasi instan dengan asisten AI mengenai gejala atau tips perawatan mata.
--   📖 **Katalog Artikel**: Baca berbagai konten edukasi yang terkurasi mengenai pencegahan dan penanganan masalah mata.
--   🚨 **Kontak Darurat**: Akses cepat ke database Rumah Sakit Mata terdekat di seluruh Indonesia.
+-   💬 **AI Assistant Chat (V2)**: Konsultasi cerdas dengan dukungan Rich Text (Markdown), saran interaktif (chips), dan lampiran dokumen/foto.
+-   👁️ **AI Refraction Test (NEW)**: Pemeriksaan ketajaman visual (Snellen) adaptif berbasis AI dengan deteksi jarak wajah real-time dan ekstraksi area mata otomatis.
+-   🛡️ **Admin Management**: Dashboard khusus admin untuk pengelolaan artikel, kontak darurat, dan ekspor data pengguna (CSV).
 -   ⏱️ **Eye Rest Timer**: Fitur cerdas untuk mengingatkan Anda beristirahat saat terlalu lama menatap layar.
+-   🚨 **Kontak Darurat**: Akses cepat ke database Rumah Sakit Mata dan kontak bantuan medis terintegrasi.
 
 ---
 

@@ -1,16 +1,20 @@
 // lib/widgets/chat/message_bubble.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/chat_message.dart';
 
 class MessageBubble extends StatefulWidget {
   final ChatMessage message;
   final Function(bool isHelpful, String? note) onFeedback;
+  final Function(String suggestion)? onSuggestionTap;
 
   const MessageBubble({
     super.key,
-    required this.message, // Pastikan required
+    required this.message,
     required this.onFeedback,
+    this.onSuggestionTap,
   });
 
   @override
@@ -75,11 +79,20 @@ class _MessageBubbleState extends State<MessageBubble> {
                           : const Radius.circular(16),
                     ),
                   ),
-                  child: SelectableText(
-                    widget.message.content, // Sudah non-null
-                    style: TextStyle(
-                      color: widget.message.isUser ? Colors.white : Colors.black87,
-                      fontSize: 14,
+                  child: MarkdownBody(
+                    data: widget.message.content,
+                    selectable: true,
+                    onTapLink: (text, href, title) {
+                      if (href != null) launchUrl(Uri.parse(href));
+                    },
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(
+                        color: widget.message.isUser ? Colors.white : Colors.black87,
+                        fontSize: 14,
+                      ),
+                      listBullet: TextStyle(
+                        color: widget.message.isUser ? Colors.white : Colors.black87,
+                      ),
                     ),
                   ),
                 ),
@@ -118,7 +131,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                   return ActionChip(
                     label: Text(suggestion),
                     onPressed: () {
-                      // Handle suggestion tap
+                      if (widget.onSuggestionTap != null) {
+                        widget.onSuggestionTap!(suggestion);
+                      }
                     },
                     backgroundColor: Colors.blue.shade50,
                     labelStyle: TextStyle(

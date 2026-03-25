@@ -382,7 +382,7 @@ class _PredictionTabState extends State<PredictionTab>
       message: 'Anda belum melakukan deteksi kesehatan mata. Mulai sekarang untuk melihat riwayat Anda.',
       icon: Icons.assignment_outlined,
       actionLabel: 'Mulai Deteksi',
-      onAction: () => Navigator.pushNamed(context, '/camera'),
+      onAction: () => Navigator.pushNamed(context, '/refraction_test'),
     );
   }
 

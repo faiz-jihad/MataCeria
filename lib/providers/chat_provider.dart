@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import '../models/chat_message.dart';
 
@@ -78,7 +79,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   // Send message
-  Future<Map<String, dynamic>> sendMessage(String message, {String? refractionResult}) async {
+  Future<Map<String, dynamic>> sendMessage(String message, {String? refractionResult, XFile? file}) async {
     _isSending = true;
     notifyListeners();
 
@@ -87,6 +88,7 @@ class ChatProvider extends ChangeNotifier {
         message: message,
         sessionId: _currentSessionId,
         refractionResult: refractionResult,
+        file: file,
       );
 
       if (response['success'] && response['data'] != null) {

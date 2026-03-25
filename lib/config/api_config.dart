@@ -13,10 +13,11 @@ class ApiConfig {
     if (kIsWeb) {
       return 'http://127.0.0.1:8000';
     } else if (Platform.isAndroid) {
-      // UNTUK SHARE KE TEMAN: Gunakan URL Cloudflare agar bisa diakses internet (Public)
-      return 'https://assured-highways-auditor-headset.trycloudflare.com/';
-      // DEBUG HP FISIK (Wi-Fi Lokal): return 'http://$_pcIP:8000';
-      // DEBUG EMULATOR: return 'http://10.0.2.2:8000';
+      // DEBUG HP FISIK: Gunakan _pcIP
+      return 'http://$_pcIP:8000';
+      // DEBUG EMULATOR: Gunakan 10.0.2.2
+      // return 'http://10.0.2.2:8000';
+      // DEBUG HP FISIK: Gunakan IP LAN Laptop/PC Anda (Contoh: 192.168.1.XX)
     } else {
       return 'https://assured-highways-auditor-headset.trycloudflare.com/';
     }
@@ -27,6 +28,7 @@ class ApiConfig {
 
   // Ini akan menghasilkan: http://.../api/v1
   static String get fullBaseUrl => '$baseUrl/api/$apiVersion';
+  static String get v2BaseUrl => '$baseUrl/api/v2';
 
   // ========== ENDPOINTS SESUAI MAIN.PY ==========
 
@@ -60,6 +62,7 @@ class ApiConfig {
   static const String analyticsFrequent = '/analytics/frequent';
   static const String emergencyContacts = '/emergency/contacts';
   static const String cameraRefractionTest = '/refraction/test';
+  static const String aiRefractionV2 = '/refraction/ai';
 
   // Endpoint ML (Khusus untuk EyeRefractionService lama)
   static const String mlHealth = '/health';

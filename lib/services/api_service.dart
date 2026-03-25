@@ -225,46 +225,76 @@ class ApiService {
     required String message,
     String? sessionId,
     String? refractionResult,
+    XFile? file,
   }) async {
     final url = Uri.parse('$baseUrl/chat/send');
-    final body = {
-      "message": message,
-      if (sessionId != null) "session_id": sessionId,
-      if (refractionResult != null) "refraction_result": refractionResult,
-    };
-
+    
     try {
-      final response = await http.post(
-        url,
-        headers: await _getHeaders(),
-        body: jsonEncode(body),
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        
-        // Cek jika bot_response ada, jika tidak sediakan mock untuk "Production Ready" feel
-        if (data['bot_response'] == null) {
-          data['bot_response'] = {
-            'id': DateTime.now().millisecondsSinceEpoch,
-            'session_id': data['session_id'] ?? sessionId ?? 'mock-session',
-            'role': 'bot',
-            'message': 'Maaf, saya sedang memproses informasi Anda. Ada yang bisa saya bantu lagi?',
-            'created_at': DateTime.now().toIso8601String(),
-            'metadata': {'type': 'default'}
-          };
-          if (data['session_id'] == null) data['session_id'] = sessionId ?? 'mock-session';
-        }
-        
-        return {'success': true, 'data': data};
-      } else {
-        return {
-          'success': false,
-          'message': _extractErrorMessage(response.body, 'Gagal mengirim pesan')
+      final token = await getToken();
+      
+      if (file == null) {
+        // Standard JSON POST
+        final body = {
+          "message": message,
+          if (sessionId != null) "session_id": sessionId,
+          if (refractionResult != null) "refraction_result": refractionResult,
         };
+        final response = await http.post(
+          url,
+          headers: await _getHeaders(),
+          body: jsonEncode(body),
+        );
+        return _handleChatResponse(response, sessionId);
+      } else {
+        // Multipart for files
+        var request = http.MultipartRequest('POST', url);
+        request.headers.addAll({
+          if (token != null) "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        });
+        
+        request.fields['message'] = message;
+        if (sessionId != null) request.fields['session_id'] = sessionId;
+        if (refractionResult != null) request.fields['refraction_result'] = refractionResult;
+        
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            await file.readAsBytes(),
+            filename: file.name,
+          ),
+        );
+        
+        var streamedResponse = await request.send();
+        var response = await http.Response.fromStream(streamedResponse);
+        return _handleChatResponse(response, sessionId);
       }
     } catch (e) {
       return {'success': false, 'message': 'Terjadi kesalahan jaringan: $e'};
+    }
+  }
+
+  Map<String, dynamic> _handleChatResponse(http.Response response, String? sessionId) {
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      
+      if (data['bot_response'] == null) {
+        data['bot_response'] = {
+          'id': DateTime.now().millisecondsSinceEpoch,
+          'session_id': data['session_id'] ?? sessionId ?? 'mock-session',
+          'role': 'bot',
+          'message': 'Maaf, saya sedang memproses informasi Anda. Ada yang bisa saya bantu lagi?',
+          'created_at': DateTime.now().toIso8601String(),
+          'metadata': {'type': 'default'}
+        };
+        if (data['session_id'] == null) data['session_id'] = sessionId ?? 'mock-session';
+      }
+      return {'success': true, 'data': data};
+    } else {
+      return {
+        'success': false,
+        'message': _extractErrorMessage(response.body, 'Gagal mengirim pesan')
+      };
     }
   }
 
@@ -427,6 +457,110 @@ class ApiService {
     ];
   }
 
+  // ========== ADMIN: ARTICLE CRUD ==========
+  Future<Map<String, dynamic>> createArticle(Map<String, dynamic> data) async {
+    final url = Uri.parse('$baseUrl${ApiConfig.articles}');
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': _extractErrorMessage(response.body, 'Gagal membuat artikel')};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateArticle(int id, Map<String, dynamic> data) async {
+    final url = Uri.parse('$baseUrl${ApiConfig.articles}/$id');
+    try {
+      final response = await http.put(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': _extractErrorMessage(response.body, 'Gagal memperbarui artikel')};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<bool> deleteArticle(int id) async {
+    final url = Uri.parse('$baseUrl${ApiConfig.articles}/$id');
+    try {
+      final response = await http.delete(url, headers: await _getHeaders());
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ========== ADMIN: EMERGENCY CONTACT CRUD ==========
+  Future<Map<String, dynamic>> createEmergencyContact(Map<String, dynamic> data) async {
+    final url = Uri.parse('$baseUrl${ApiConfig.emergencyContacts}');
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': _extractErrorMessage(response.body, 'Gagal membuat kontak darurat')};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateEmergencyContact(int id, Map<String, dynamic> data) async {
+    final url = Uri.parse('$baseUrl${ApiConfig.emergencyContacts}/$id');
+    try {
+      final response = await http.put(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': _extractErrorMessage(response.body, 'Gagal memperbarui kontak darurat')};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<bool> deleteEmergencyContact(int id) async {
+    final url = Uri.parse('$baseUrl${ApiConfig.emergencyContacts}/$id');
+    try {
+      final response = await http.delete(url, headers: await _getHeaders());
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ========== ADMIN: USER EXPORT ==========
+  Future<List<dynamic>> getAdminUsers() async {
+    final url = Uri.parse('$baseUrl/admin/users'); // Custom endpoint for admin
+    try {
+      final response = await http.get(url, headers: await _getHeaders());
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('Error fetching users for admin: $e');
+    }
+    return [];
+  }
+
   // Camera Refraction Test Result
   Future<bool> submitRefractionResult({
     required double avgDistanceCm,
@@ -449,6 +583,39 @@ class ApiService {
     } catch (e) {
       print('Error submitting refraction result: $e');
       return false;
+    }
+  }
+  
+  // AI-Powered Eye Refraction Test (v2)
+  Future<Map<String, dynamic>> postAIRefractionAI({
+    required String imageBase64,
+    required Map<String, dynamic> snellenData,
+    required String deviceInfo,
+  }) async {
+    final url = Uri.parse('${ApiConfig.v2BaseUrl}${ApiConfig.aiRefractionV2}');
+    final body = {
+      "image": imageBase64,
+      "snellen_data": snellenData,
+      "device_info": deviceInfo,
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {
+          'success': false,
+          'message': _extractErrorMessage(response.body, 'Gagal memproses tes AI')
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan jaringan: $e'};
     }
   }
 

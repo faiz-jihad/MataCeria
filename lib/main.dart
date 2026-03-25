@@ -19,8 +19,12 @@ import 'screens/welcome_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/article_detail_screen.dart';
 import 'providers/refraction_test_provider.dart';
-import 'screens/prediction/refraction_test_screen.dart';
+import 'screens/prediction/ai_refraction_test_screen.dart';
 import 'providers/language_provider.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/admin_article_list_screen.dart';
+import 'screens/admin/admin_emergency_list_screen.dart';
+import 'screens/admin/admin_export_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,7 +98,7 @@ class MyApp extends StatelessWidget {
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const HomeScreen(),
           '/camera': (context) => const CameraScreen(),
-          '/refraction_test': (context) => const RefractionTestScreen(),
+          '/refraction_test': (context) => const AIRefractionTestScreen(),
           '/result': (context) => const ResultScreen(),
           '/chat': (context) => const ChatScreen(),
           '/chat-history': (context) => const ChatHistoryScreen(),
@@ -103,6 +107,10 @@ class MyApp extends StatelessWidget {
             final article = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
             return ArticleDetailScreen(article: article);
           },
+          '/admin': (context) => const AdminDashboardScreen(),
+          '/admin/articles': (context) => const AdminArticleListScreen(),
+          '/admin/emergency': (context) => const AdminEmergencyListScreen(),
+          '/admin/export': (context) => const AdminExportScreen(),
         },
       ),
     );
