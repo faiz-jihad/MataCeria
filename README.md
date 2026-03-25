@@ -83,5 +83,5 @@ Detailed maintenance guide in `database_guide.md`.
 
 ---
 
-Developed with ❤️ by Antigravity for better eye health.
+Developed with ❤️ for better eye health.
 **M a t a C e r i a**
