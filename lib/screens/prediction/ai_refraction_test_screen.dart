@@ -20,9 +20,7 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
       enableLandmarks: true,
-      performanceMode: FaceDetectorMode.fast,
-      enableContours: false,
-      enableClassification: false,
+      performanceMode: FaceDetectorMode.accurate,
     ),
   );
   bool _isDetecting = false;
@@ -47,7 +45,7 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
 
       _cameraController = CameraController(
         frontCamera,
-        ResolutionPreset.medium, // Using medium for better eye crops
+        ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
@@ -63,7 +61,7 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
         _processCameraImage(image);
       });
     } catch (e) {
-      debugPrint("Camera Error: \$e");
+      debugPrint("Camera Error: $e");
     }
   }
 
@@ -71,7 +69,6 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
     try {
       final provider = Provider.of<RefractionTestProvider>(context, listen: false);
 
-      // 1. Detect Face for Distance
       final WriteBuffer allBytes = WriteBuffer();
       for (final Plane plane in image.planes) {
         allBytes.putUint8List(plane.bytes);
@@ -79,7 +76,9 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
       final bytes = allBytes.done().buffer.asUint8List();
 
       final Size imageSize = Size(image.width.toDouble(), image.height.toDouble());
-      final InputImageRotation imageRotation = InputImageRotation.rotation270deg; 
+      
+      final sensorOrientation = _cameraController!.description.sensorOrientation;
+      final InputImageRotation imageRotation = _getRotation(sensorOrientation);
       final InputImageFormat inputImageFormat = InputImageFormat.yuv420;
 
       final inputImageData = InputImageMetadata(
@@ -96,7 +95,6 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
         final face = faces.first;
         provider.updateDistance(face);
         
-        // 2. If test is finishing, trigger AI Processing
         if (provider.testStatus == TestStatus.finished && !provider.isProcessingAI && provider.aiResultCategory == null) {
           _cameraController?.stopImageStream();
           final String deviceInfo = Platform.operatingSystem;
@@ -104,7 +102,7 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
           final base64Image = await CameraProcessor.processEyeRegionBase64(
              cameraImage: image,
              face: face,
-             sensorOrientation: _cameraController!.description.sensorOrientation,
+             sensorOrientation: sensorOrientation,
              lensDirection: _cameraController!.description.lensDirection,
           );
 
@@ -117,10 +115,14 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
         }
       }
     } catch (e) {
-      debugPrint("Error detecting face: \$e");
+      debugPrint("Error detecting face: $e");
     } finally {
       if (mounted) _isDetecting = false;
     }
+  }
+
+  InputImageRotation _getRotation(int sensorOrientation) {
+    return InputImageRotationValue.fromRawValue(sensorOrientation) ?? InputImageRotation.rotation0deg;
   }
 
   void _showDisclaimer() {
@@ -176,14 +178,14 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
           Color statusColor = Colors.grey;
           String statusText = "camera_detecting".tr(context);
 
-          if (provider.isCalibrated) {
+          if (distance > 0) {
             if (distance < 30) {
               statusColor = Colors.red;
               statusText = "camera_too_close".tr(context);
-            } else if (distance >= 30 && distance <= 50) {
+            } else if (distance >= 30 && distance <= 55) {
               statusColor = Colors.green;
               statusText = "camera_ideal".tr(context);
-            } else if (distance > 50) {
+            } else if (distance > 55) {
               statusColor = Colors.orange;
               statusText = "camera_too_far".tr(context);
             }
@@ -191,7 +193,6 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
 
           return Column(
             children: [
-              // Feedback Banner
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -202,7 +203,6 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
-              // Camera Preview
               SizedBox(
                 height: 150,
                 width: 120,
@@ -215,7 +215,6 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Main Test Area
               Expanded(
                 child: _buildTestContent(provider),
               ),
@@ -326,7 +325,6 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
         ],
       );
     } else {
-      // Test is finished - show processing or results
       if (provider.isProcessingAI) {
         return const Center(
           child: Column(
@@ -379,7 +377,7 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
                          Text(
                           "Confidence: ${provider.aiConfidence!.toStringAsFixed(1)}%",
                           style: const TextStyle(fontSize: 16, color: Colors.black54),
-                        )
+                         )
                       ]
                     ],
                   ),
@@ -415,14 +413,13 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
   }
 
   Widget _buildInputBtn(RefractionTestProvider provider, int errors, String label, Color color) {
+    final isIdeal = provider.currentDistanceCm >= 30 && provider.currentDistanceCm <= 55;
     return ElevatedButton(
-      onPressed: provider.currentDistanceCm < 30 || provider.currentDistanceCm > 50 
-        ? null // Disable if not in ideal range
-        : () {
+      onPressed: !provider.isCalibrated ? null : () {
         provider.submitRowResult(errors);
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: color,
+        backgroundColor: isIdeal ? color : color.withOpacity(0.5),
         foregroundColor: Colors.white,
       ),
       child: Text(label),

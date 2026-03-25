@@ -21,6 +21,7 @@ import 'screens/article_detail_screen.dart';
 import 'providers/refraction_test_provider.dart';
 import 'screens/prediction/ai_refraction_test_screen.dart';
 import 'providers/language_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_article_list_screen.dart';
 import 'screens/admin/admin_emergency_list_screen.dart';
@@ -81,38 +82,51 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => EyeRestProvider()),
         ChangeNotifierProvider(create: (_) => RefractionTestProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'Eye Refraksi',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-          fontFamily: 'GoogleSans',
-        ),
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const SplashScreen(),
-          '/welcome': (context) => const WelcomeScreen(),
-          '/login': (context) => const LoginScreen(),
-          '/register': (context) => const RegisterScreen(),
-          '/home': (context) => const HomeScreen(),
-          '/camera': (context) => const CameraScreen(),
-          '/refraction_test': (context) => const AIRefractionTestScreen(),
-          '/result': (context) => const ResultScreen(),
-          '/chat': (context) => const ChatScreen(),
-          '/chat-history': (context) => const ChatHistoryScreen(),
-          '/analytics': (context) => const AnalyticsScreen(),
-          '/article-detail': (context) {
-            final article = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-            return ArticleDetailScreen(article: article);
-          },
-          '/admin': (context) => const AdminDashboardScreen(),
-          '/admin/articles': (context) => const AdminArticleListScreen(),
-          '/admin/emergency': (context) => const AdminEmergencyListScreen(),
-          '/admin/export': (context) => const AdminExportScreen(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Eye Refraksi',
+            debugShowCheckedModeBanner: false,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            darkTheme: ThemeData.dark(useMaterial3: true).copyWith(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.blue,
+                brightness: Brightness.dark,
+              ),
+            ),
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+              useMaterial3: true,
+              fontFamily: 'GoogleSans',
+            ),
+            initialRoute: '/',
+            routes: {
+              '/': (context) => const SplashScreen(),
+              '/welcome': (context) => const WelcomeScreen(),
+              '/login': (context) => const LoginScreen(),
+              '/register': (context) => const RegisterScreen(),
+              '/home': (context) => const HomeScreen(),
+              '/camera': (context) => const CameraScreen(),
+              '/refraction_test': (context) => const AIRefractionTestScreen(),
+              '/result': (context) => const ResultScreen(),
+              '/chat': (context) => const ChatScreen(),
+              '/chat-history': (context) => const ChatHistoryScreen(),
+              '/analytics': (context) => const AnalyticsScreen(),
+              '/article-detail': (context) {
+                final article = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+                return ArticleDetailScreen(article: article);
+              },
+              '/admin': (context) => const AdminDashboardScreen(),
+              '/admin/articles': (context) => const AdminArticleListScreen(),
+              '/admin/emergency': (context) => const AdminEmergencyListScreen(),
+              '/admin/export': (context) => const AdminExportScreen(),
+            },
+          );
         },
       ),
     );
   }
 }
+

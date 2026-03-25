@@ -81,12 +81,10 @@ class _AdminArticleFormScreenState extends State<AdminArticleFormScreen> {
     final isEditing = widget.article != null;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Artikel' : 'Tambah Artikel', style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        title: Text(isEditing ? 'Edit Artikel' : 'Tambah Artikel',
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
-        foregroundColor: Colors.black,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -138,14 +136,18 @@ class _AdminArticleFormScreenState extends State<AdminArticleFormScreen> {
               ElevatedButton(
                 onPressed: _isSubmitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue.shade700,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _isSubmitting
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(isEditing ? 'Perbarui Artikel' : 'Simpan Artikel', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ? CircularProgressIndicator(
+                        color: Theme.of(context).colorScheme.onPrimary)
+                    : Text(isEditing ? 'Perbarui Artikel' : 'Simpan Artikel',
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ],
           ),

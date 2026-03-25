@@ -6,7 +6,7 @@ import '../services/api_service.dart';
 enum TestStatus { calibration, ready, testing, finished }
 
 class SnellenRow {
-  final int distanceRef; // Denominator of fraction (e.g. 200, 100, etc)
+  final int distanceRef; 
   final String letters;
 
   SnellenRow({required this.distanceRef, required this.letters});
@@ -18,12 +18,19 @@ class RefractionTestProvider with ChangeNotifier {
   TestStatus _testStatus = TestStatus.calibration;
   TestStatus get testStatus => _testStatus;
 
-  double _focalLength = 0;
+  double _focalLength = 500; 
   bool _isCalibrated = false;
   bool get isCalibrated => _isCalibrated;
 
   double _currentDistanceCm = 0;
   double get currentDistanceCm => _currentDistanceCm;
+
+  // Real-time smoothing
+  final List<double> _distanceHistory = [];
+  static const int _historySize = 5;
+
+  // Calibration averaging
+  final List<double> _calibrationPixelIpds = [];
 
   // AI & Analytics States
   Rect? _faceBoundingBox;
@@ -66,11 +73,10 @@ class RefractionTestProvider with ChangeNotifier {
   int _missedChars = 0;
   int get missedChars => _missedChars;
 
-  int _smallestRowRead = 200; // default worst score
+  int _smallestRowRead = 200; 
   int get smallestRowRead => _smallestRowRead;
 
-  // For distance logic
-  final double realIpdMm = 63.0; // Average human Inter-Pupillary Distance
+  final double realIpdMm = 63.0; 
 
   void updateDistance(Face face) {
     if (face.landmarks[FaceLandmarkType.leftEye] != null &&
@@ -80,7 +86,6 @@ class RefractionTestProvider with ChangeNotifier {
       final double rightEyeX = face.landmarks[FaceLandmarkType.rightEye]!.position.x.toDouble();
       final double rightEyeY = face.landmarks[FaceLandmarkType.rightEye]!.position.y.toDouble();
 
-      // Calculate distance between eyes in pixels
       final double dx = leftEyeX - rightEyeX;
       final double dy = leftEyeY - rightEyeY;
       final double pixelIpd = sqrt(dx * dx + dy * dy);
@@ -88,16 +93,22 @@ class RefractionTestProvider with ChangeNotifier {
       _faceBoundingBox = face.boundingBox;
 
       if (_testStatus == TestStatus.calibration) {
-        // Assume user holds phone at exactly 40cm during calibration
-        // Focal Length = (Distance * Pixel IPD) / Real IPD
-        // 40cm = 400mm
-        _focalLength = (400.0 * pixelIpd) / realIpdMm;
-      } else if (_isCalibrated && pixelIpd > 0) {
-        // Distance (mm) = (Focal Length * Real IPD) / Pixel IPD
-        final distMm = (_focalLength * realIpdMm) / pixelIpd;
-        _currentDistanceCm = distMm / 10.0;
-        notifyListeners();
+        _calibrationPixelIpds.add(pixelIpd);
+        if (_calibrationPixelIpds.length > 20) _calibrationPixelIpds.removeAt(0);
+        
+        // Instant visual feedback for user
+        final tempDist = (_focalLength * realIpdMm) / pixelIpd;
+        _currentDistanceCm = tempDist / 10.0;
+      } else {
+        final rawDistMm = (_focalLength * realIpdMm) / pixelIpd;
+        final rawDistCm = rawDistMm / 10.0;
+        
+        // Moving average smoothing
+        _distanceHistory.add(rawDistCm);
+        if (_distanceHistory.length > _historySize) _distanceHistory.removeAt(0);
+        _currentDistanceCm = _distanceHistory.reduce((a, b) => a + b) / _distanceHistory.length;
       }
+      notifyListeners();
     } else {
         _faceBoundingBox = null;
         notifyListeners();
@@ -105,9 +116,13 @@ class RefractionTestProvider with ChangeNotifier {
   }
 
   void finishCalibration() {
-    _isCalibrated = true;
-    _testStatus = TestStatus.ready;
-    notifyListeners();
+    if (_calibrationPixelIpds.isNotEmpty) {
+      final avgPixelIpd = _calibrationPixelIpds.reduce((a, b) => a + b) / _calibrationPixelIpds.length;
+      _focalLength = (400.0 * avgPixelIpd) / realIpdMm;
+      _isCalibrated = true;
+      _testStatus = TestStatus.ready;
+      notifyListeners();
+    }
   }
 
   void startTest() {
@@ -117,6 +132,7 @@ class RefractionTestProvider with ChangeNotifier {
     _smallestRowRead = 200;
     _responseTimes.clear();
     _lastRowShownTime = DateTime.now();
+    _distanceHistory.clear();
     notifyListeners();
   }
 
@@ -126,9 +142,6 @@ class RefractionTestProvider with ChangeNotifier {
     }
     
     _missedChars += errors;
-    
-    // Logic to determine if they pass the row.
-    // E.g., if total errors in this row > half the letters, they fail.
     int charsInRow = currentRow.letters.replaceAll(' ', '').length;
     
     if (errors <= charsInRow / 2) {
@@ -170,12 +183,10 @@ class RefractionTestProvider with ChangeNotifier {
         final data = result['data'];
         _aiResultCategory = data['kategori'] ?? 'Unknown';
         
-        // Handle variations in API response (string '95%' or double 0.95)
         if (data['confidence'] is String) {
            _aiConfidence = double.tryParse(data['confidence'].replaceAll('%', '')) ?? 0.0;
         } else if (data['confidence'] is num) {
            _aiConfidence = (data['confidence'] as num).toDouble();
-           // if it's less than 1, it might be a probability. Convert to percentage if needed.
            if (_aiConfidence! < 1.0) _aiConfidence = _aiConfidence! * 100;
         } else {
            _aiConfidence = 0.0;
@@ -194,13 +205,15 @@ class RefractionTestProvider with ChangeNotifier {
   void resetTest() {
     _testStatus = TestStatus.calibration;
     _isCalibrated = false;
-    _focalLength = 0;
+    _focalLength = 500; 
     _currentDistanceCm = 0;
     _currentRowIndex = 0;
     _missedChars = 0;
     _smallestRowRead = 200;
     _aiResultCategory = null;
     _aiConfidence = null;
+    _distanceHistory.clear();
+    _calibrationPixelIpds.clear();
     notifyListeners();
   }
 }

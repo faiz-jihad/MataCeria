@@ -18,7 +18,7 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
       enableLandmarks: true,
-      performanceMode: FaceDetectorMode.fast,
+      performanceMode: FaceDetectorMode.accurate,
     ),
   );
   bool _isDetecting = false;
@@ -43,7 +43,7 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
 
       _cameraController = CameraController(
         frontCamera,
-        ResolutionPreset.low,
+        ResolutionPreset.medium, // Better for landmark precision
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
@@ -59,7 +59,7 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
         _processCameraImage(image);
       });
     } catch (e) {
-      debugPrint("Camera Error: \$e");
+      debugPrint("Camera Error: $e");
     }
   }
 
@@ -72,7 +72,10 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
       final bytes = allBytes.done().buffer.asUint8List();
 
       final Size imageSize = Size(image.width.toDouble(), image.height.toDouble());
-      final InputImageRotation imageRotation = InputImageRotation.rotation270deg; // Front camera portrait estimation
+      
+      // ROTATION: Use sensor orientation for Android
+      final sensorOrientation = _cameraController!.description.sensorOrientation;
+      final InputImageRotation imageRotation = _getRotation(sensorOrientation);
 
       final InputImageFormat inputImageFormat = InputImageFormat.yuv420;
 
@@ -90,10 +93,14 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
         Provider.of<RefractionTestProvider>(context, listen: false).updateDistance(faces.first);
       }
     } catch (e) {
-      debugPrint("Error detecting face: \$e");
+      debugPrint("Error detecting face: $e");
     } finally {
-      _isDetecting = false;
+      if (mounted) _isDetecting = false;
     }
+  }
+
+  InputImageRotation _getRotation(int sensorOrientation) {
+    return InputImageRotationValue.fromRawValue(sensorOrientation) ?? InputImageRotation.rotation0deg;
   }
 
   void _showDisclaimer() {
@@ -250,16 +257,12 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
       );
     } else if (provider.testStatus == TestStatus.testing) {
       final row = provider.currentRow;
-      // Calculate letter physical size based on actual distance
-      // visual angle = 5 arcminutes
-      // Height = Distance(mm) * tan(5 arcmin) * (distanceRef / 20)
       
       double distanceMm = provider.currentDistanceCm > 0 ? provider.currentDistanceCm * 10.0 : 400.0;
       double heightMm = distanceMm * 0.0014544 * (row.distanceRef / 20.0);
       
-      // Convert mm to pixels using devicePixelRatio
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-      double logicalPx = (heightMm / 25.4) * (160 * pixelRatio) / pixelRatio; // Equivalent to heightMm / 0.15875
+      double logicalPx = (heightMm / 25.4) * (160 * pixelRatio) / pixelRatio; 
 
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -327,14 +330,15 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
   }
 
   Widget _buildInputBtn(RefractionTestProvider provider, int errors, String label, Color color) {
+    // Relaxation: Allow input even if slightly out of range, but highlight current distance
+    final isIdeal = provider.currentDistanceCm >= 30 && provider.currentDistanceCm <= 55;
+
     return ElevatedButton(
-      onPressed: provider.currentDistanceCm < 30 || provider.currentDistanceCm > 50 
-        ? null // Disable if not in ideal range
-        : () {
+      onPressed: !provider.isCalibrated ? null : () {
         provider.submitRowResult(errors);
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: color,
+        backgroundColor: isIdeal ? color : color.withOpacity(0.5),
         foregroundColor: Colors.white,
       ),
       child: Text(label),

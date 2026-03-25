@@ -10,6 +10,7 @@ import '../models/emergency_model.dart';
 import '../models/user_model.dart';
 import '../widgets/skeleton_loader.dart';
 import '../l10n/app_strings.dart';
+import '../config/api_config.dart';
 
 class HomeTab extends StatefulWidget {
   final Function(int)? onTabSelected;
@@ -299,31 +300,66 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                           child: Padding(
                             padding: const EdgeInsets.all(12),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (article['imageUrl'] != null)
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(article['imageUrl'], height: 120, width: double.infinity, fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Container(
-                                        height: 120, color: Colors.grey.shade200, child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                                      ),
-                                    ),
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (article['imageUrl'] != null)
+                                    Builder(builder: (context) {
+                                      final imageUrl = article['imageUrl'].toString();
+                                      final fullUrl = imageUrl.startsWith('http')
+                                          ? imageUrl
+                                          : '${ApiConfig.baseUrl}$imageUrl';
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          fullUrl,
+                                          height: 120,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              Container(
+                                            height: 120,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .surfaceContainerHighest,
+                                            child: Icon(Icons.image,
+                                                size: 50,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurfaceVariant),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  const SizedBox(height: 10),
+                                  Text(article['title'] ?? 'Artikel',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 4),
+                                  Text(article['content'] ?? '',
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant)),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(article['date'] ?? '',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .outline)),
                                   ),
-                                const SizedBox(height: 10),
-                                Text(article['title'] ?? 'Artikel', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                const SizedBox(height: 4),
-                                Text(article['content'] ?? '', maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade700)),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Text(article['date'] ?? '', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
                     );
                   },
                 ),
@@ -338,7 +374,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   Widget _buildAppBar(User? user, EyeRefractionProvider mlProvider) {
     return SliverAppBar(
       pinned: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
       title: Row(
@@ -351,15 +387,15 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
               Text(
                 '👋 MataCeria!',
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
                 user?.name ?? 'Pengguna',
-                style: const TextStyle(
-                  color: Colors.black,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -378,9 +414,10 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
       children: [
         IconButton(
           onPressed: () => _showNotificationsSheet(context),
-          icon: Icon(Icons.notifications_none_rounded, color: Colors.grey.shade700, size: 28),
+          icon: Icon(Icons.notifications_none_rounded,
+              color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
           style: IconButton.styleFrom(
-            backgroundColor: Colors.grey.shade100,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
@@ -412,9 +449,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) => Container(
           height: MediaQuery.of(context).size.height * 0.75,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: Column(
             children: [
@@ -425,7 +462,11 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Notifikasi', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A))),
+                    Text('Notifikasi',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary)),
                     if (_unreadNotifications > 0)
                       TextButton(
                         onPressed: () {
@@ -693,7 +734,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
             if (activities.isEmpty) {
               return Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(15)),
+                decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(15)),
                 child: const Center(child: Text('Belum ada riwayat')),
               );
             }
@@ -725,16 +768,16 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     }
 
     Color getColor() {
-      if (type == 'detection') return const Color(0xFFE0F2FE);
-      if (type == 'consultation') return const Color(0xFFFEF3C7);
-      return Colors.grey.shade100;
+      if (type == 'detection') return Theme.of(context).colorScheme.primaryContainer;
+      if (type == 'consultation') return Theme.of(context).colorScheme.tertiaryContainer;
+      return Theme.of(context).colorScheme.surfaceContainerHighest;
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -763,7 +806,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                   time,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade500,
+                    color: Theme.of(context).colorScheme.outline,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -778,7 +821,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                   subtitle,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade500,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -805,12 +848,12 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: Theme.of(context).colorScheme.errorContainer,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       Icons.emergency,
-                      color: Colors.red.shade400,
+                      color: Theme.of(context).colorScheme.error,
                       size: 18,
                     ),
                   ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+import '../config/api_config.dart';
 
 class ArticleDetailScreen extends StatelessWidget {
   final Map<String, dynamic> article;
@@ -16,17 +18,29 @@ class ArticleDetailScreen extends StatelessWidget {
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
               background: article['imageUrl'] != null
-                  ? Image.network(
-                      article['imageUrl'],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                      ),
-                    )
+                  ? Builder(builder: (context) {
+                      final imageUrl = article['imageUrl'].toString();
+                      final fullUrl = imageUrl.startsWith('http')
+                          ? imageUrl
+                          : '${ApiConfig.baseUrl}$imageUrl';
+                      return Image.network(
+                        fullUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          child: Icon(Icons.image,
+                              size: 50,
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
+                      );
+                    })
                   : Container(
-                      color: Colors.blue.shade100,
-                      child: const Icon(Icons.article, size: 80, color: Colors.blue),
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(Icons.article,
+                          size: 80, color: Theme.of(context).colorScheme.primary),
                     ),
             ),
           ),
@@ -39,13 +53,13 @@ class ArticleDetailScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         article['category'] ?? 'Health',
                         style: TextStyle(
-                          color: Colors.blue.shade700,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -54,7 +68,9 @@ class ArticleDetailScreen extends StatelessWidget {
                     const Spacer(),
                     Text(
                       article['date'] ?? '',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.outline,
+                          fontSize: 12),
                     ),
                   ],
                 ),
@@ -72,10 +88,10 @@ class ArticleDetailScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   article['content'] ?? 'Isi artikel tidak tersedia.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     height: 1.6,
-                    color: Colors.black87,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -87,7 +103,7 @@ class ArticleDetailScreen extends StatelessWidget {
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -98,19 +114,12 @@ class ArticleDetailScreen extends StatelessWidget {
         ),
         child: ElevatedButton.icon(
           onPressed: () {
-            final String shareText = 'Baca artikel kesehatan mata menarik dari MataCeria: '
+            final String shareText =
+                'Baca artikel kesehatan mata menarik dari MataCeria: '
                 '${article['title']}\n\n'
-                '${article['content']?.toString().substring(0, 100)}...';
-            
-            Clipboard.setData(ClipboardData(text: shareText)).then((_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Teks artikel berhasil disalin ke clipboard!'),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            });
+                '${article['content']?.toString() ?? ""}';
+
+            Share.share(shareText, subject: article['title']);
           },
           icon: const Icon(Icons.share),
           label: const Text('Bagikan Artikel'),

@@ -11,6 +11,7 @@ import '../models/user_model.dart';
 import '../providers/eye_rest_provider.dart';
 import '../providers/language_provider.dart';
 import '../l10n/app_strings.dart';
+import '../providers/theme_provider.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -26,7 +27,6 @@ class _ProfileTabState extends State<ProfileTab>
 
   // Settings State
   bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
   bool _twoFactorEnabled = false;
   String _selectedLanguage = 'Indonesia';
   final List<String> _languages = ['Indonesia', 'English', '中文', 'العربية'];
@@ -147,7 +147,6 @@ class _ProfileTabState extends State<ProfileTab>
       final prefs = await SharedPreferences.getInstance();
       setState(() {
         _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-        _darkModeEnabled = prefs.getBool('dark_mode_enabled') ?? false;
         _twoFactorEnabled = prefs.getBool('two_factor_enabled') ?? false;
         _selectedLanguage = prefs.getString('selected_language') ?? 'Indonesia';
       });
@@ -160,11 +159,11 @@ class _ProfileTabState extends State<ProfileTab>
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('notifications_enabled', _notificationsEnabled);
-      await prefs.setBool('dark_mode_enabled', _darkModeEnabled);
       await prefs.setBool('two_factor_enabled', _twoFactorEnabled);
       await prefs.setString('selected_language', _selectedLanguage);
       _showSuccessSnackBar('Settings saved successfully');
     } catch (e) {
+      debugPrint('Error saving settings: $e');
       _showErrorSnackBar('Failed to save settings');
     }
   }
@@ -1358,18 +1357,19 @@ class _ProfileTabState extends State<ProfileTab>
             onTap: () => _showModernLanguageDialog(),
             trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
           ),
-          _buildModernSettingTile(
-            icon: Icons.dark_mode_rounded,
-            title: 'prof_dark_mode'.tr(context),
-            subtitle: _darkModeEnabled ? 'Always On' : 'Adaptive',
-            color: const Color(0xFF8B5CF6),
-            trailing: Switch(
-              value: _darkModeEnabled,
-              onChanged: (value) async {
-                setState(() => _darkModeEnabled = value);
-                await _saveSettings();
-              },
-              activeColor: const Color(0xFF8B5CF6),
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) => _buildModernSettingTile(
+              icon: Icons.dark_mode_rounded,
+              title: 'prof_dark_mode'.tr(context),
+              subtitle: themeProvider.isDarkMode ? 'Always On' : 'Adaptive',
+              color: const Color(0xFF8B5CF6),
+              trailing: Switch(
+                value: themeProvider.isDarkMode,
+                onChanged: (value) async {
+                  await themeProvider.toggleTheme(value);
+                },
+                activeColor: const Color(0xFF8B5CF6),
+              ),
             ),
           ),
         ]),

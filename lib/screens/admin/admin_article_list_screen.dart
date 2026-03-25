@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/article_model.dart';
+import '../../config/api_config.dart';
 import 'admin_article_form_screen.dart';
 
 class AdminArticleListScreen extends StatefulWidget {
@@ -78,12 +79,10 @@ class _AdminArticleListScreenState extends State<AdminArticleListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Daftar Artikel', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        title: const Text('Daftar Artikel',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
-        foregroundColor: Colors.black,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -118,16 +117,23 @@ class _AdminArticleListScreenState extends State<AdminArticleListScreen> {
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: article.imageUrl != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    article.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(Icons.image),
-                                  ),
-                                )
-                              : const Icon(Icons.article),
+                           child: article.imageUrl != null
+                               ? Builder(builder: (context) {
+                                   final imageUrl = article.imageUrl!;
+                                   final fullUrl = imageUrl.startsWith('http')
+                                       ? imageUrl
+                                       : '${ApiConfig.baseUrl}$imageUrl';
+                                   return ClipRRect(
+                                     borderRadius: BorderRadius.circular(10),
+                                     child: Image.network(
+                                       fullUrl,
+                                       fit: BoxFit.cover,
+                                       errorBuilder: (_, __, ___) =>
+                                           const Icon(Icons.image),
+                                     ),
+                                   );
+                                 })
+                               : const Icon(Icons.article),
                         ),
                         title: Text(
                           article.title,
