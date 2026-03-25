@@ -2,7 +2,7 @@ class ApiConfig {
   // ========== CONFIGURATION ==========
   static String get baseUrl {
     // UPDATED: Using the Cloudflare URL for public access
-    return 'https://teams-bios-phantom-lakes.trycloudflare.com';
+    return 'https://mill-too-auditor-prefer.trycloudflare.com';
   }
 
   static String get mlBaseUrl => baseUrl;
@@ -26,9 +26,10 @@ class ApiConfig {
 
   // ========== 3. TES REFRAKSI (/refraction & /api/v2) ==========
   static const String refractionTest = '/refraction-test'; // Standard V1
-  static const String uploadTest = '/refraction-test';     // Compatibility
-  static const String cameraRefractionTest = '/refraction/test'; // Compatibility
-  static const String aiRefractionV2 = '/refraction/ai';    // AI Hybrid V2
+  static const String uploadTest = '/refraction-test'; // Compatibility
+  static const String cameraRefractionTest =
+      '/refraction/test'; // Compatibility
+  static const String aiRefractionV2 = '/refraction/ai'; // AI Hybrid V2
 
   // ========== 4. ARTIKEL & RISET (/articles) ==========
   static const String articles = '/articles';
@@ -45,7 +46,7 @@ class ApiConfig {
   static const String adminUsers = '/admin/users';
   static const String adminExport = '/admin/users/export';
   static const String adminBroadcast = '/admin/notifications/broadcast';
-  static const String adminTests = '/admin/tests'; 
+  static const String adminTests = '/admin/tests';
 
   // ========== 7. KONTAK DARURAT (/emergency/contacts) ==========
   static const String emergencyContacts = '/emergency/contacts';

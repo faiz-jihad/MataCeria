@@ -26,7 +26,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     {
       'title': 'Monitor Kesehatan',
       'description': 'Simpan dan pantau riwayat kesehatan mata Anda secara berkala untuk penanganan yang lebih tepat.',
-      'image': 'assets/images/doctor_illustration2.png',
+      'image': 'assets/images/onboarding_illustration2.png',
     },
   ];
 
