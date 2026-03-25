@@ -2,6 +2,7 @@ import google.generativeai as genai
 import os
 import logging
 from app.core.config import settings
+from app.services.research_service import ResearchService
 
 logger = logging.getLogger(__name__)
 
@@ -54,21 +55,28 @@ def get_chat_response(user_query: str, context_articles: list):
     context_text = ""
     if context_articles:
         context_articles = context_articles[:5] 
-        context_text = "Berikut adalah beberapa referensi kesehatan mata:\n"
+        context_text = "Berikut adalah beberapa referensi kesehatan mata internal kami:\n"
         for art in context_articles:
             context_text += f"- {art.title}: {art.content}\n"
     
-    # 2. Susun Prompt untuk RAG
+    # 2. Ambil context riset eksternal (Real-time APIs)
+    research_context = ResearchService.get_research_context(user_query)
+    
+    # 3. Susun Prompt untuk RAG
     prompt = f"""
     Anda adalah asisten AI khusus kesehatan mata (Eye Health Assistant) untuk aplikasi 'Eye Refraksi'.
     
     REFERENSI INTERNAL KAMI:
     {context_text}
 
+    DATA PENELITIAN & MEDIS TERBARU (EKSTERNAL):
+    {research_context if research_context else "Tidak ada data riset terbaru untuk topik ini."}
+
     INSTRUKSI:
-    1. Gunakan referensi di atas untuk menjawab.
-    2. Jika tidak ada di referensi, gunakan pengetahuan medis mata umum.
-    3. Gunakan bahasa Indonesia yang santun.
+    1. PRIORITASKAN referensi internal jika tersedia.
+    2. Gunakan DATA PENELITIAN EKSTERNAL jika user bertanya spesifik tentang uji klinis, statistik WHO, izin FDA, atau jurnal terbaru.
+    3. Jika tidak ada di referensi keduanya, gunakan pengetahuan medis mata umum.
+    4. Gunakan bahasa Indonesia yang santun dan informatif.
 
     PERTANYAAN PENGGUNA: 
     {user_query}

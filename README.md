@@ -11,80 +11,77 @@ Sistem backend cerdas berbasis AI untuk **MataCeria** — aplikasi asisten keseh
 
 ---
 
-## 🎯 Tujuan Proyek
-Aplikasi ini bertujuan untuk memberikan akses mudah bagi masyarakat dalam melakukan deteksi dini rabun jauh (Miopia) melalui teknologi **Computer Vision** dan menyediakan asisten kesehatan mata berbasis **Generative AI** yang edukatif.
-
-## ✨ Fitur Utama
-- 🧪 **AI Eye Refraction Test**: Prediksi tingkat miopia (Normal, Ringan, Berat) secara akurat menggunakan model **TensorFlow**.
-- 💬 **AI Chat Assistant (RAG)**: Konsultasi kesehatan mata pintar yang ditenagai oleh **Google Gemini 1.5 Flash** dengan basis pengetahuan (Retrieval-Augmented Generation) dari artikel medis internal.
-- 📚 **Edukasi Terkurasi**: Akses ke berbagai artikel kesehatan mata yang valid dan informatif.
-- 🏥 **Emergency Eye Contacts**: Database kontak darurat Rumah Sakit Mata di seluruh Indonesia.
-- 🔐 **Secure Authentication**: Sistem keamanan tingkat tinggi menggunakan **JWT (JSON Web Token)** dan hashing password **Bcrypt**.
-
----
-
-## 🛠️ Stack Teknologi
-- **Backend Framework**: FastAPI (Python 3.10+)
-- **Database**: PostgreSQL dengan SQLAlchemy ORM
-- **AI/ML Engine**: TensorFlow (Prediction) & Google Generative AI (Gemini Flash)
-- **Image Processing**: OpenCV & NumPy
-- **Security**: Python-jose (JWT) & Passlib (Bcrypt)
-- **DevOps**: Docker & Docker Compose
-- **Production Server**: Gunicorn dengan worker Uvicorn
+## 🚀 Fitur Utama & Pembaruan Terbaru
+- 🧬 **AI Eye Refraction (Hybrid V2)**: Gabungan model **TensorFlow** (60%) dan **Rule-based Snellen** (40%) untuk akurasi klinis maksimal.
+- 💬 **Medical Research RAG (V3)**: Chatbot pintar yang terintegrasi dengan database medis dunia:
+    - **ClinicalTrials.gov**: Uji klinis mata terbaru.
+    - **WHO GHO**: Statistik kesehatan mata global.
+    - **OpenFDA**: Izin alat kesehatan terbaru (LASIK, Lensa).
+    - **PubMed**: Jurnal ilmiah kedokteran terkini.
+- 🔔 **Notifikasi Otomatis**: Sistem broadcast notifikasi untuk Registrasi, Hasil Tes, dan Pembaruan Artikel.
+- 🛡️ **Keamanan & Throttling**: Perlindungan dari abuse menggunakan **SlowAPI** (Rate Limiting) pada seluruh endpoint sensitif.
+- 🌐 **Remote Access**: Deployment instan menggunakan **Cloudflare Tunnel** (akses publik tanpa port-forwarding).
 
 ---
 
-## 🚀 Memulai (Quick Start)
+## 📋 Prasyarat Sistem (Wajib Instal!)
 
-### 1. Prasyarat
-- [Docker](https://www.docker.com/) & Docker Compose terinstal.
-- Google Gemini API Key dari [Google AI Studio](https://aistudio.google.com/).
+Sebelum memulai, pastikan komputer Bapak atau rekan tim sudah menginstal:
 
-### 2. Pengaturan Lingkungan (Environment)
-Salin file `.env.example` dan isi variabel yang diperlukan:
-```bash
-cp .env.example .env
+1.  **Docker Desktop** (Paling Penting): Digunakan untuk menjalankan database PostgreSQL dan aplikasi API secara otomatis tanpa perlu instalasi manual.
+    *   [Download di sini](https://www.docker.com/products/docker-desktop/) (Windows/Mac/Linux).
+2.  **Git**: Untuk mendownload source code dan melakukan push/pull dari repositori GitHub.
+    *   [Download di sini](https://git-scm.com/downloads).
+3.  **Google AI API Key**: Diperlukan untuk mengakses otak AI Gemini.
+    *   Dapatkan gratis di: [Google AI Studio](https://aistudio.google.com/).
+
+---
+
+## 🚀 Cara Instalasi & Menjalankan
+
+### 1. Pengaturan File Environment
+Buat file `.env` di root folder (gunakan `.env.example` sebagai referensi):
+```env
+DATABASE_URL=postgresql://user_admin:password_kuat@db:5432/db_refraksi
+GEMINI_API_KEY=AIzaSy... (Masukkan Key Bapak di sini)
+SECRET_KEY=... (Gunakan string acak panjang untuk JWT)
 ```
-> [!IMPORTANT]
-> Pastikan `GEMINI_API_KEY` dan `SECRET_KEY` sudah terisi dengan benar di file `.env`.
 
-### 3. Jalankan Container
-Bangun dan jalankan seluruh servis (API & DB):
+### 2. Jalankan Seluruh Sistem (Docker)
+Cukup satu perintah saja:
 ```bash
 docker-compose up --build -d
 ```
+*Tunggu hingga proses build selesai. Docker akan menyiapkan Database dan API secara otomatis.*
 
-### 4. Inisialisasi Data (Seeding)
-Jalankan script berikut untuk mengisi database dengan data awal (artikel, rumah sakit, & admin):
+### 3. Masukkan Data Awal (Seeding) - WAJIB!
+Agar aplikasi tidak kosong, masukkan data awal dengan perintah:
 ```bash
+# Isi Data Dasar (Admin & RS)
 docker exec -it fastapi_refraksi python seed_data.py
+
+# Isi Artikel Resmi (Scraped Data)
+docker exec -it fastapi_refraksi python seed_articles.py
 ```
 
 ---
 
-## 📂 Struktur Proyek
-```text
-.
-├── app/
-│   ├── api/            # API Router & v1 Endpoints
-│   ├── core/           # Configs, Security, & Logging
-│   ├── db/             # Database Session & Base Models
-│   ├── services/       # AI Logic (ML Engine & Gemini Service)
-│   ├── models.py       # SQLAlchemy Database Schemas
-│   └── schemas.py      # Pydantic Data Validation
-├── uploads/            # Media storage (Input Images)
-├── Dockerfile          # Container Definition
-└── docker-compose.yaml # Service Orchestration
-```
+## 🌐 Cara Akses Publik & HP (Cloudflare)
+Agar aplikasi Flutter di HP bisa mengakses API Bapak, gunakan link Tunnel:
+1.  Jalankan perintah ini: `docker logs cloudflared_refraksi`.
+2.  Cari link yang berakhiran `.trycloudflare.com`.
+3.  Gunakan link tersebut sebagai BASE_URL di aplikasi Flutter Bapak.
 
 ---
 
-## 📖 Dokumentasi API
-Akses dokumentasi interaktif API di:
-- **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+## 📖 Dokumentasi API & Database
+- **Swagger UI (Daftar Endpoint)**: `http://localhost:8000/docs`.
+- **Ekspor DB**: `docker exec -t postgres_refraksi pg_dump -U user_admin db_refraksi > backup.sql`.
+- **Impor DB**: `cat backup.sql | docker exec -i postgres_refraksi psql -U user_admin -d db_refraksi`.
+
+Detailed maintenance guide in `database_guide.md`.
 
 ---
 
-Developed with ❤️ for better eye health.
+Developed with ❤️ by Antigravity for better eye health.
 **M a t a C e r i a**
