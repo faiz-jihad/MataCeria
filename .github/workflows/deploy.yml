@@ -1,0 +1,78 @@
+name: Deploy MataCeria to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    name: CI/CD to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            REPO="https://${{ secrets.GIT_TOKEN }}@github.com/${{ github.repository }}.git"
+            DIR="${{ secrets.VPS_PATH }}"
+            CONTAINER="fastapi_refraksi"
+            BRANCH="main"
+            
+            echo "Checking git..."
+            if ! command -v git &>/dev/null; then
+              echo "Installing git..."
+              sudo apt-get update && sudo apt-get install -y git
+            fi
+            
+            echo "Checking docker..."
+            if ! command -v docker &>/dev/null; then
+              echo "Installing docker..."
+              curl -fsSL https://get.docker.com | sh
+              sudo usermod -aG docker $USER
+            fi
+            
+            echo "Cloning or pulling repo..."
+            if [ ! -d "$DIR/.git" ]; then
+              echo "Cloning repo..."
+              git clone --branch $BRANCH $REPO $DIR
+            else
+              echo "Pulling update..."
+              cd $DIR
+              git reset --hard HEAD
+              git pull origin $BRANCH
+            fi
+            
+            cd $DIR
+            
+            echo "Preparing .env file..."
+            echo "DB_USER=${{ secrets.DB_USER }}" > .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DB_HOST=db" >> .env
+            echo "DB_PORT=5432" >> .env
+            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+            echo "ALLOWED_ORIGINS=*" >> .env
+            
+            echo "Restarting Docker Compose..."
+            docker compose down
+            docker compose up -d --build
+            
+            echo "Waiting for services to be ready..."
+            sleep 10
+            
+            echo "Running database initialization/seeding..."
+            docker exec $CONTAINER python -m scripts.seed_data || echo "Seeding failed or already exists"
+            docker exec $CONTAINER python -m scripts.seed_articles || echo "Article seeding failed"
+            docker exec $CONTAINER python -m scripts.seed_regional_data || echo "Regional data seeding failed"
+            
+            echo "Deployment Finished Successfully! 👁️✨"

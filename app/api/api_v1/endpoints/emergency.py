@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.security import get_current_admin
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from app import models, schemas
 from app.db.session import get_db
@@ -9,8 +9,14 @@ from app.db.session import get_db
 router = APIRouter()
 
 @router.get("/", response_model=List[schemas.EmergencyContactResponse])
-async def get_emergency_contacts(db: Session = Depends(get_db)):
-    contacts = db.query(models.EmergencyContact).all()
+async def get_emergency_contacts(
+    region: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.EmergencyContact)
+    if region:
+        query = query.filter(models.EmergencyContact.region.ilike(f"%{region}%"))
+    contacts = query.all()
     return contacts
 @router.post("/", response_model=schemas.EmergencyContactResponse, status_code=status.HTTP_201_CREATED)
 async def create_emergency_contact(

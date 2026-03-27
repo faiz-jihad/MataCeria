@@ -148,10 +148,30 @@ class AIRefractionService:
         
         predicted_class_name = cls.CLASS_MAPPING.get(final_class, "Unknown")
 
+        # --- 5. MEDICAL RECOMMENDATION LOGIC ---
+        recommendation = "Lakukan pemeriksaan rutin setiap 1 tahun."
+        action_required = False
+        can_consult_chatbot = False
+
+        if final_class == 1:
+            recommendation = "Gangguan ringan terdeteksi. Gunakan kacamata jika terasa mata lelah."
+            can_consult_chatbot = True
+        elif final_class == 2:
+            recommendation = "Miopia terdeteksi. Segera konsultasi ke dokter mata untuk resep kacamata."
+            action_required = True
+            can_consult_chatbot = True
+        elif final_class == 3:
+            recommendation = "Gangguan penglihatan SERIUS. Sangat disarankan untuk segera ke spesialis mata!"
+            action_required = True
+            can_consult_chatbot = True
+
         return schemas.RefractionAIResultDetail(
             visual_acuity=snellen_fraction,
             snellen_decimal=round(decimal_acuity, 2),
             predicted_class=predicted_class_name,
             confidence=round(ai_confidence, 2),
+            recommendation=recommendation,
+            action_required=action_required,
+            can_consult_chatbot=can_consult_chatbot,
             source=source
         )

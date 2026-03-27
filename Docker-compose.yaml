@@ -11,21 +11,33 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - uploads_data:/app/uploads  # Volume untuk menyimpan foto mata secara permanen
+      - uploads_data:/app/uploads
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   db:
     image: postgres:15-alpine
     container_name: postgres_refraksi
     environment:
-      POSTGRES_USER: user_admin
-      POSTGRES_PASSWORD: password_kuat
-      POSTGRES_DB: db_refraksi
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   tunnel:
     image: cloudflare/cloudflared:latest

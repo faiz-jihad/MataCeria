@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from app.core.security import get_current_admin
 from sqlalchemy.orm import Session
 from typing import List
-import locale
+import os
+import shutil
+import uuid
 
 from app import models, schemas
 from app.db.session import get_db
 from app.utils import create_notification
+from app.services.research_service import ResearchService
 
 router = APIRouter()
+UPLOAD_ART_DIR = "uploads/articles"
+os.makedirs(UPLOAD_ART_DIR, exist_ok=True)
 
 # Fungsi helper untuk format tanggal Indonesia
 def format_indo_date(dt):
@@ -98,3 +103,47 @@ async def delete_article(
     db.delete(article)
     db.commit()
     return None
+
+@router.post("/upload-image")
+async def upload_article_image(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_current_admin)
+):
+    """
+    Upload gambar dari perangkat untuk digunakan di artikel.
+    Mengembalikan path yang bisa diakses publik.
+    """
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File harus berupa gambar")
+        
+    file_extension = os.path.splitext(file.filename)[1]
+    filename = f"art_{uuid.uuid4()}{file_extension}"
+    file_path = os.path.join(UPLOAD_ART_DIR, filename)
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    # Kembalikan URL yang bisa diakses (Base URL ditangani Flutter, kita kasih path-nya)
+    # Misal: "uploads/articles/art_xxxx.jpg"
+    return {"message": "Gambar berhasil diunggah", "image_url": file_path}
+
+@router.get("/research-search")
+async def search_medical_research(
+    query: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Cari informasi medis dari API eksternal (ClinicalTrials, WHO, PubMed, FDA)
+    berdasarkan query pencarian artikel.
+    """
+    if not query or len(query) < 3:
+        return {"status": "success", "results": "Query terlalu pendek."}
+        
+    research_results = ResearchService.get_research_context(query)
+    
+    return {
+        "status": "success",
+        "query": query,
+        "results": research_results or "Tidak ada hasil penelitian medis yang relevan ditemukan."
+    }

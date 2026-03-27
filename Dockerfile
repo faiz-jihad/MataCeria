@@ -1,20 +1,34 @@
+# Stage 1: Build
+FROM python:3.10-slim as builder
+
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+COPY requirements.txt .
+# Hapus --no-deps agar semua dependency juga di-bundle ke dalam wheels
+RUN pip wheel --no-cache-dir --wheel-dir /app/wheels -r requirements.txt
+
+# Stage 2: Final
 FROM python:3.10-slim
 
 WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-# Kita lewati apt-get update untuk menghindari isu network mirror/repository yang sedang down (Exit Code 100).
-# Karena kita menggunakan 'opencv-python-headless' dan 'psycopg2-binary', 
-# sebagian besar library system sudah ter-bundle di dalam wheel python.
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=builder /app/wheels /wheels
+COPY --from=builder /app/requirements.txt .
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
 
 COPY . .
 
-# Buat folder uploads jika belum ada
-RUN mkdir -p uploads/images
+# Buat folder uploads jika belum ada dan atur permission
+RUN mkdir -p uploads/images && chmod -R 777 uploads
+
+ENV WORKERS=1
+ENV PORT=8000
 
 EXPOSE 8000
 
-# Jalankan Gunicorn dengan Uvicorn worker
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8000"]
+# Jalankan Gunicorn dengan Uvicorn worker (Jumlah worker dan port bisa diatur via env)
+CMD ["sh", "-c", "gunicorn -w ${WORKERS} -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:${PORT} --timeout 120"]

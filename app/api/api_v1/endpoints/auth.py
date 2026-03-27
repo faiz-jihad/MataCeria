@@ -79,4 +79,11 @@ async def reset_password(request: schemas.ResetPasswordRequest, db: Session = De
     user.hashed_password = hash_password(request.new_password)
     user.reset_token = None
     db.commit()
+
+    create_notification(
+        db, 
+        user.id, 
+        "Password Berhasil Diubah 🔐", 
+        "Password akun MataCeria Anda telah berhasil diperbarui. Jika ini bukan Anda, segera hubungi kami."
+    )
     return {"message": "Password berhasil direset"}

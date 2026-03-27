@@ -1,3 +1,6 @@
+import os
+import base64
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.core.ratelimit import limiter
@@ -8,6 +11,7 @@ from app.db.session import get_db
 from app.core.security import get_current_user
 from app.services.refraction_service import RefractionService
 from app.services.ai_inference_service import AIRefractionService
+from app.services.face_detection_service import FaceDetectionService
 from app.utils import create_notification
 
 router = APIRouter()
@@ -95,14 +99,70 @@ async def process_hybrid_ai_refraction(
     if test_request.snellen_data.avg_distance_cm <= 0:
         raise HTTPException(status_code=400, detail="Invalid distance.")
         
+    # Log raw data for debugging (as requested by user)
+    # Mask image data to keep logs readable
+    debug_data = test_request.model_dump()
+    if "image_data" in debug_data:
+        debug_data["image_data"]["eye_frame_base64"] = "[MASKED]"
+    logger.info(f"AI RAW DATA: {debug_data}")
+        
     # 2. Process Screening via AI Service
     try:
         results = AIRefractionService.predict(test_request)
         
-        # 3. Opsional: Log ke Database untuk future training (disimpan di background / database)
-        # Note: Kita bisa buat table log khusus, misal AILog, tapi untuk kecepatan
-        # print saja ke log atau buat entry standard.
+        # 3. Simpan Gambar & Log ke Database untuk Riwayat
+        image_path = "uploads/refraction/default.jpg"
+        try:
+            # Pastikan direktori ada
+            os.makedirs("uploads/refraction", exist_ok=True)
+            
+            # Decode dan simpan gambar
+            img_data = test_request.image_data.eye_frame_base64
+            if ',' in img_data:
+                img_data = img_data.split(',')[1]
+            
+            filename = f"refraction_ai_{uuid.uuid4().hex[:8]}.jpg"
+            file_path = os.path.join("uploads/refraction", filename)
+            
+            with open(file_path, "wb") as f:
+                f.write(base64.b64decode(img_data))
+            
+            image_path = file_path
+            
+            # Simpan ke Table RiwayatTes
+            new_record = models.RiwayatTes(
+                user_id=int(test_request.user_id) if test_request.user_id.isdigit() else 0,
+                image_path=image_path,
+                hasil_klasifikasi=results.predicted_class,
+                estimasi_dioptri=results.visual_acuity, # Simpan snellen fraction sebagai estimasi sementara
+                confidence_score=results.confidence,
+                catatan_admin=f"AI Recommendation: {results.recommendation}"
+            )
+            db.add(new_record)
+            db.commit()
+            db.refresh(new_record)
+            logger.info(f"[AI DB] Success saved record ID {new_record.id} for user {test_request.user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save AI record to database: {e}")
+            db.rollback()
+
         logger.info(f"[AI Log] User {test_request.user_id} Result: {results.predicted_class} (Conf: {results.confidence})")
+        
+        # 4. Kirim Notifikasi ke User (Gunakan data user_id dari request)
+        # Note: Kita asumsikan user_id valid dari Mobile. 
+        # Untuk keamanan lebih, idealnya matching dengan current_user, tapi V2 didesain fleksibel.
+        try:
+            target_user_id = int(test_request.user_id) if test_request.user_id.isdigit() else None
+            if target_user_id:
+                create_notification(
+                    db, 
+                    target_user_id, 
+                    "AI Refraksi Selesai! 🤖", 
+                    f"Hasil deteksi AI: {results.predicted_class}. Akurasi: {int(results.confidence*100)}%."
+                )
+        except Exception:
+            pass
 
         return schemas.RefractionAIResponse(
             status="success",
@@ -117,3 +177,13 @@ async def process_hybrid_ai_refraction(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Terjadi kegagalan pemrosesan AI."
         )
+
+@router_v2.post("/detect-distance", response_model=schemas.RefractionAIDetectDistanceResponse)
+async def detect_face_distance(
+    request: schemas.RefractionAIDetectDistanceRequest
+):
+    """
+    Endpoint untuk deteksi wajah & mata secara real-time guna menghitung jarak (Pixel IPD).
+    Digunakan sebagai feedback untuk user saat melakukan tes Snellen.
+    """
+    return FaceDetectionService.detect_face_and_eyes(request.image)
