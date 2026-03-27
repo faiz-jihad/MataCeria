@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'config/api_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/eye_refraction_provider.dart';
 import 'screens/splash_screen.dart';
@@ -32,29 +33,32 @@ import 'screens/admin/admin_export_screen.dart';
 import 'dart:ui';
 
 void main() async {
+  debugPrint('INIT_DEBUG: Starting application...');
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables
+  debugPrint('INIT_DEBUG: Loading .env...');
   try {
-    await dotenv.load(fileName: '.env');
+    await dotenv.load(fileName: '.env').timeout(const Duration(seconds: 3));
+    debugPrint('INIT_DEBUG: .env loaded successfully');
+    debugPrint('INIT_DEBUG: Base URL: ${ApiConfig.baseUrl}');
   } catch (e) {
-    debugPrint('Warning: .env file not found. Using default values: $e');
+    debugPrint('INIT_DEBUG_WARNING: .env file failed to load in time: $e');
   }
   
-  // 1. Flutter Framework Errors
+  // Framework Errors
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    debugPrint('Flutter Error: ${details.exception}');
-    // Optional: Send to Crashlytics/Sentry here
+    debugPrint('INIT_DEBUG_ERROR: Flutter Error: ${details.exception}');
   };
 
-  // 2. Platform/Async Errors
+  // Platform Errors
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('Platform Error: $error');
+    debugPrint('INIT_DEBUG_ERROR: Platform Error: $error');
     return true;
   };
 
-  // 3. UI Error Widget (Red Screen of Death replacement)
+  // UI Error Widget (Red Screen of Death replacement)
   ErrorWidget.builder = (details) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -79,11 +83,7 @@ void main() async {
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () {
-                    // Fix: Don't call main() recursively. 
-                    // Use a proper restart mechanism or simply navigate to home.
-                    // For now, let's just allow them to go back to splash.
-                  },
+                  onPressed: () {},
                   child: const Text('Tutup Aplikasi'),
                 ),
               ],
@@ -94,9 +94,25 @@ void main() async {
     );
   };
 
-  final prefs = await SharedPreferences.getInstance();
-  final hasToken = prefs.containsKey('access_token');
-  runApp(MyApp(isLoggedIn: hasToken));
+  debugPrint('INIT_DEBUG: Getting SharedPreferences...');
+  try {
+    final prefs = await SharedPreferences.getInstance().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        debugPrint('INIT_DEBUG_ERROR: SharedPreferences timed out!');
+        throw Exception('SharedPreferences Timeout');
+      },
+    );
+    
+    final hasToken = prefs.containsKey('access_token');
+    debugPrint('INIT_DEBUG: IsLoggedIn: $hasToken');
+    debugPrint('INIT_DEBUG: Running App...');
+    runApp(MyApp(isLoggedIn: hasToken));
+  } catch (e) {
+    debugPrint('INIT_DEBUG_ERROR: Critical failure in main(): $e');
+    // Run app anyway to show ErrorWidget
+    runApp(const MyApp(isLoggedIn: false));
+  }
 }
 
 class MyApp extends StatelessWidget {

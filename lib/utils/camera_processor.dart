@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +25,10 @@ class CameraProcessor {
         ?? InputImageRotation.rotation0deg;
 
     final format = InputImageFormatValue.fromRawValue(cameraImage.format.raw) 
-        ?? InputImageFormat.yuv420;
+        ?? (Platform.isAndroid ? InputImageFormat.yuv420 : InputImageFormat.bgra8888);
+
+    debugPrint('CAMERA_DEBUG: Format raw=${cameraImage.format.raw} | mapped=${format.name}');
+    debugPrint('CAMERA_DEBUG: Size ${cameraImage.width}x${cameraImage.height} | Rotation $sensorOrientation');
 
     return InputImage.fromBytes(
       bytes: bytes,

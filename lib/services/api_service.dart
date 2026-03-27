@@ -16,11 +16,14 @@ class ApiService {
   // Helper for headers
   Future<Map<String, String>> _getHeaders() async {
     final token = await getToken();
-    return {
+    final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-A115F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36',
       if (token != null) 'Authorization': 'Bearer $token',
     };
+    // debugPrint('API_DEBUG: Headers: $headers');
+    return headers;
   }
 
   // Endpoint Register
@@ -34,6 +37,7 @@ class ApiService {
     String? statusPekerjaan,
   }) async {
     final url = Uri.parse('$baseUrl${ApiConfig.register}');
+    debugPrint('API_DEBUG: POST $url');
     final body = {
       'nama_lengkap': name,
       'email': email,
@@ -49,7 +53,7 @@ class ApiService {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -78,20 +82,22 @@ class ApiService {
     required String password,
   }) async {
     final url = Uri.parse('$baseUrl${ApiConfig.login}');
+    debugPrint('LOGIN_DEBUG: POST $url');
 
     try {
+      final headers = await _getHeaders();
+      headers['Content-Type'] = 'application/x-www-form-urlencoded';
+
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-        },
+        headers: headers,
         body: {
-          'username': email,
+          'username': email, // Backend expects 'username' but we pass the email string
           'password': password,
         },
-      );
+      ).timeout(const Duration(seconds: 10));
 
+      debugPrint('LOGIN_DEBUG: Status ${response.statusCode} | Body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['access_token'];
@@ -102,6 +108,7 @@ class ApiService {
 
         return {'success': true, 'data': data};
       } else {
+        debugPrint('LOGIN_DEBUG: Failure Headers: ${response.headers}');
         return {
           'success': false,
           'message': _extractErrorMessage(response.body, 'Login gagal, periksa email dan password Anda')
@@ -115,20 +122,25 @@ class ApiService {
   // Get Current User
   Future<User?> getCurrentUser() async {
     final url = Uri.parse('$baseUrl${ApiConfig.user}');
+    debugPrint('API_DEBUG: Fetching current user from $url');
     try {
-      final response = await http.get(url, headers: await _getHeaders());
+      final response = await http
+          .get(url, headers: await _getHeaders())
+          .timeout(const Duration(seconds: 10));
+      
+      debugPrint('API_DEBUG: GetCurrentUser status: ${response.statusCode}');
+      
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final user = User.fromJson(data);
         
-        // Persist user_id for other providers (e.g. RefractionTestProvider)
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', user.id.toString());
         
         return user;
       }
     } catch (e) {
-      // Log error internally or handle appropriately
+      debugPrint('API_ERROR: Error fetching current user: $e');
     }
     return null;
   }
@@ -139,9 +151,9 @@ class ApiService {
     await prefs.remove('access_token');
   }
 
-  // ML Health Check
   Future<bool> checkMLHealth() async {
     final url = Uri.parse('$baseUrl${ApiConfig.mlHealth}');
+    debugPrint('API_DEBUG: GET $url');
     try {
       final response = await http.get(url).timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
@@ -343,7 +355,7 @@ class ApiService {
 
   // Analytics
   Future<Map<String, dynamic>> getUserAnalytics() async {
-    final url = Uri.parse('$baseUrl${ApiConfig.analyticsUser}');
+    final url = Uri.parse('$baseUrl/analytics/user');
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
@@ -356,7 +368,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getQueryCategories() async {
-    final url = Uri.parse('$baseUrl${ApiConfig.analyticsCategories}');
+    final url = Uri.parse('$baseUrl/analytics/categories');
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
@@ -369,7 +381,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> getFrequentQueries() async {
-    final url = Uri.parse('$baseUrl${ApiConfig.analyticsFrequent}');
+    final url = Uri.parse('$baseUrl/analytics/frequent');
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {

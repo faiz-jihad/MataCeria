@@ -32,13 +32,28 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Verify token by fetching user
     final apiService = ApiService();
-    final user = await apiService.getCurrentUser();
+    debugPrint('SPLASH_DEBUG: Verifying session for token presence...');
     
-    if (user != null) {
-      _finishSplash(splashStart, '/home');
-    } else {
-      // Token is invalid/expired
-      await apiService.logout(); // Clear token
+    try {
+      // Use a timeout to avoid getting stuck forever on splash
+      final user = await apiService.getCurrentUser().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+           debugPrint('SPLASH_DEBUG: User fetch timed out, skipping to welcome/login');
+           return null;
+        },
+      );
+      
+      if (user != null) {
+        debugPrint('SPLASH_DEBUG: User verified: ${user.name}');
+        _finishSplash(splashStart, '/home');
+      } else {
+        debugPrint('SPLASH_DEBUG: User verification failed or timed out');
+        await apiService.logout(); // Clear token to be safe
+        _finishSplash(splashStart, '/welcome');
+      }
+    } catch (e) {
+      debugPrint('SPLASH_ERROR: Error during verification: $e');
       _finishSplash(splashStart, '/welcome');
     }
   }

@@ -8,7 +8,7 @@ import '../config/api_config.dart';
 
 class EyeRefractionService {
   // Gunakan baseUrl dari ApiConfig untuk ML service
-  static String get baseUrl => ApiConfig.mlBaseUrl;
+  static String get baseUrl => ApiConfig.fullBaseUrl;
   
   // Cek kesehatan service
   Future<bool> checkHealth() async {
@@ -51,11 +51,11 @@ class EyeRefractionService {
   // Prediksi gambar
   Future<Map<String, dynamic>> predictImage(File imageFile) async {
     try {
-      debugPrint('📤 Mengirim gambar ke ML service: $baseUrl${ApiConfig.mlPredict}');
+      debugPrint('📤 Mengirim gambar ke ML service: $baseUrl${ApiConfig.uploadTest}');
       
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl${ApiConfig.mlPredict}'),
+        Uri.parse('$baseUrl${ApiConfig.uploadTest}'),
       );
       
       request.files.add(

@@ -3,74 +3,80 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class ApiConfig {
   // ========== CONFIGURATION ==========
   static String get baseUrl {
-    return dotenv.env['API_BASE_URL'] ??
-        'https://using-students-categories-discovery.trycloudflare.com';
+    try {
+      final raw = dotenv.env['API_BASE_URL'] ??
+          'https://puts-investments-enjoyed-improve.trycloudflare.com';
+      return raw.endsWith('/') ? raw.substring(0, raw.length - 1) : raw;
+    } catch (_) {
+      // Fallback if dotenv is not initialized
+      return 'https://puts-investments-enjoyed-improve.trycloudflare.com';
+    }
   }
 
   static String get mlBaseUrl => baseUrl;
-  static const String apiVersion = 'v1';
-  static String get fullBaseUrl => '$baseUrl/api/$apiVersion';
+  
+  /// The backend confirmed the prefix is /api/v1
+  static String get fullBaseUrl => '$baseUrl/api/v1';
   static String get v2BaseUrl => '$baseUrl/api/v2';
 
-  // ========== 1. AUTENTIKASI (/auth) ==========
+  // ========== 1. AUTH (/api/v1/auth) ==========
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
-  static const String logout = '/logout';
+  static const String logout = '/logout'; // misc router
 
-  // ========== 2. PROFIL PENGGUNA (/user) ==========
-  static const String userMe = '/user/me';
-  static const String user = '/user/me'; // Compatibility
+  // ========== 2. USER (/api/v1/user) ==========
+  static const String user = '/user/me';
+  static const String userSettings = '/user/settings';
   static const String profileImage = '/user/profile-image';
-  static const String activities = '/user/activities';
   static const String changePassword = '/user/change-password';
+  static const String activities = '/user/activities';
 
-  // ========== 3. TES REFRAKSI (/refraction & /api/v2) ==========
-  static const String refractionTest = '/refraction-test'; // Standard V1
-  static const String uploadTest = '/refraction-test'; // Compatibility
-  static const String cameraRefractionTest =
-      '/refraction/test'; // Compatibility
-  static const String aiRefractionV2 = '/refraction/ai'; // AI Hybrid V2
-  static const String detectDistance = '/refraction/detect-distance'; // V2
+  // ========== 3. REFRACTION (/api/v1/refraction + /api/v2/refraction) ==========
+  // V1 – Snellen test result
+  static const String cameraRefractionTest = '/refraction/test';
+  // V2 – AI processing (via v2BaseUrl)
+  static const String aiRefractionV2 = '/refraction/ai';
+  static const String detectDistance = '/refraction/detect-distance';
 
-  // ========== 4. ARTIKEL & RISET (/articles) ==========
+  // ========== 4. TESTING HISTORY (/api/v1) ==========
+  /// POST / GET – save & fetch refraction test history
+  static const String refractionTest = '/refraction-test';
+  static const String uploadTest = '/refraction-test'; // compatibility alias
+  static const String predictions = '/predictions';
+
+  // ========== 5. ARTICLES (/api/v1/articles) ==========
   static const String articles = '/articles';
   static const String researchSearch = '/articles/research-search';
   static const String uploadArticleImage = '/articles/upload-image';
 
-  // ========== 5. NOTIFIKASI (/notifications) ==========
+  // ========== 6. CHAT (/api/v1/chat) ==========
+  static const String chat = '/chat/send'; // ← correct endpoint is /chat/send
+  static const String chatHistory = '/chat/history';
+  static const String chatMessages = '/chat/messages';
+  static const String chatSessions = '/chat/sessions';
+  static const String chatFeedback = '/chat/feedback';
+  static const String unreadChats = '/chat/unread-count';
+
+  // ========== 7. NOTIFICATIONS (/api/v1/notifications) ==========
   static const String notifications = '/notifications';
-  static const String markRead = '/read'; // append to notification ID
   static const String readAll = '/notifications/read-all';
 
-  // ========== 6. ADMIN TOOLS (/admin) ==========
+  // ========== 8. EMERGENCY (/api/v1/emergency) ==========
+  static const String emergencyContacts = '/emergency/contacts';
+
+  // ========== 9. ADMIN (/api/v1/admin) ==========
   static const String adminStats = '/admin/stats/overview';
   static const String adminUsers = '/admin/users';
   static const String adminExport = '/admin/users/export';
   static const String adminBroadcast = '/admin/notifications/broadcast';
   static const String adminTests = '/admin/tests';
 
-  // ========== 7. KONTAK DARURAT (/emergency/contacts) ==========
-  static const String emergencyContacts = '/emergency/contacts';
-
-  // ========== 8. AI CHATBOT (/chat) ==========
-  static const String chat = '/chat';
-  static const String chatV2 = '/chat/v2';
-  static const String chatHistory = '/chat/history';
-  static const String chatSessions = '/chat/sessions';
-  static const String chatFeedback = '/chat/feedback';
-  static const String unreadChats = '/chat/unread-count';
-
-  // ========== 9. ANALYTICS & PREDICTIONS (Legacy/ML) ==========
-  static const String analyticsUser = '/analytics/user';
-  static const String analyticsCategories = '/analytics/categories';
-  static const String analyticsFrequent = '/analytics/frequent';
-  static const String predictions = '/predictions';
-  static const String mlHealth = '/health';
+  // ========== 10. MISC (/api/v1) ==========
   static const String mlConditions = '/conditions';
-  static const String mlPredict = '/refraction-test';
+  static const String mlHealth = '/health';
 
-  // ========== GENERAL SETTINGS ==========
+  // ========== GENERAL ==========
   static const int connectionTimeout = 30;
 }
