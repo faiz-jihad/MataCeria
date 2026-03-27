@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/refraction_test_provider.dart';
 import '../../l10n/app_strings.dart';
+import '../../utils/camera_processor.dart';
 
 class RefractionTestScreen extends StatefulWidget {
   const RefractionTestScreen({super.key});
@@ -15,13 +15,8 @@ class RefractionTestScreen extends StatefulWidget {
 
 class _RefractionTestScreenState extends State<RefractionTestScreen> {
   CameraController? _cameraController;
-  final FaceDetector _faceDetector = FaceDetector(
-    options: FaceDetectorOptions(
-      enableLandmarks: true,
-      performanceMode: FaceDetectorMode.accurate,
-    ),
-  );
   bool _isDetecting = false;
+  DateTime? _lastDetectionTime;
   bool _cameraInitialized = false;
 
   @override
@@ -53,55 +48,44 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
 
       setState(() => _cameraInitialized = true);
 
-      _cameraController!.startImageStream((CameraImage image) {
+      _cameraController!.startImageStream((image) {
         if (_isDetecting) return;
         _isDetecting = true;
         _processCameraImage(image);
       });
     } catch (e) {
-      debugPrint("Camera Error: $e");
+      debugPrint('Camera Error: $e');
     }
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
     try {
-      final WriteBuffer allBytes = WriteBuffer();
-      for (final Plane plane in image.planes) {
-        allBytes.putUint8List(plane.bytes);
+      // Throttle backend calls (e.g., every 400ms)
+      final now = DateTime.now();
+      if (_lastDetectionTime != null && 
+          now.difference(_lastDetectionTime!).inMilliseconds < 400) {
+        return;
       }
-      final bytes = allBytes.done().buffer.asUint8List();
+      _lastDetectionTime = now;
 
-      final Size imageSize = Size(image.width.toDouble(), image.height.toDouble());
+      final provider = Provider.of<RefractionTestProvider>(context, listen: false);
       
-      // ROTATION: Use sensor orientation for Android
-      final sensorOrientation = _cameraController!.description.sensorOrientation;
-      final InputImageRotation imageRotation = _getRotation(sensorOrientation);
-
-      final InputImageFormat inputImageFormat = InputImageFormat.yuv420;
-
-      final inputImageData = InputImageMetadata(
-        size: imageSize,
-        rotation: imageRotation,
-        format: inputImageFormat,
-        bytesPerRow: image.planes[0].bytesPerRow,
+      // Convert frame to Base64 for backend (using CameraProcessor for valid JPEG)
+      final base64Image = await CameraProcessor.convertFullImageToBase64(
+        cameraImage: image,
+        sensorOrientation: _cameraController!.description.sensorOrientation,
       );
-
-      final inputImage = InputImage.fromBytes(bytes: bytes, metadata: inputImageData);
-
-      final faces = await _faceDetector.processImage(inputImage);
-      if (faces.isNotEmpty && mounted) {
-        Provider.of<RefractionTestProvider>(context, listen: false).updateDistance(faces.first);
+      
+      if (base64Image != null && mounted) {
+        await provider.updateDistanceRemote(base64Image);
       }
     } catch (e) {
-      debugPrint("Error detecting face: $e");
+      debugPrint('Error detecting face via backend: $e');
     } finally {
       if (mounted) _isDetecting = false;
     }
   }
 
-  InputImageRotation _getRotation(int sensorOrientation) {
-    return InputImageRotationValue.fromRawValue(sensorOrientation) ?? InputImageRotation.rotation0deg;
-  }
 
   void _showDisclaimer() {
     showDialog(
@@ -112,17 +96,17 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange),
             SizedBox(width: 8),
-            Text("Medical Disclaimer")
+            Text('Medical Disclaimer')
           ],
         ),
-        content: Text("camera_disclaimer".tr(context)),
+        content: Text('camera_disclaimer'.tr(context)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
             },
-            child: const Text("Saya Mengerti"),
+            child: const Text('Saya Mengerti'),
           )
         ],
       ),
@@ -132,7 +116,6 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
   @override
   void dispose() {
     _cameraController?.dispose();
-    _faceDetector.close();
     super.dispose();
   }
 
@@ -154,18 +137,18 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
         builder: (context, provider, child) {
           final distance = provider.currentDistanceCm;
           Color statusColor = Colors.grey;
-          String statusText = "camera_detecting".tr(context);
+          var statusText = 'camera_detecting'.tr(context);
 
           if (provider.isCalibrated) {
             if (distance < 30) {
               statusColor = Colors.red;
-              statusText = "camera_too_close".tr(context);
+              statusText = 'camera_too_close'.tr(context);
             } else if (distance >= 30 && distance <= 50) {
               statusColor = Colors.green;
-              statusText = "camera_ideal".tr(context);
+              statusText = 'camera_ideal'.tr(context);
             } else if (distance > 50) {
               statusColor = Colors.orange;
-              statusText = "camera_too_far".tr(context);
+              statusText = 'camera_too_far'.tr(context);
             }
           }
 
@@ -176,23 +159,77 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 color: statusColor,
-                child: Text(
-                  statusText,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (provider.isDetectingRemote && !provider.isCalibrated) ...[
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      statusText,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    if (provider.isCalibrated && distance > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${distance.toStringAsFixed(1)} cm',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               // Camera Preview
-              SizedBox(
-                height: 150,
-                width: 120,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    bottomRight: Radius.circular(20),
-                    bottomLeft: Radius.circular(20),
+              // Camera Preview dengan Countdown Overlay
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    height: 150,
+                    width: 120,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        bottomRight: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
+                      ),
+                      child: CameraPreview(_cameraController!),
+                    ),
                   ),
-                  child: CameraPreview(_cameraController!),
-                ),
+                  if (provider.countdown > 0)
+                    Container(
+                      height: 150,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.4),
+                        borderRadius: const BorderRadius.only(
+                          bottomRight: Radius.circular(20),
+                          bottomLeft: Radius.circular(20),
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${provider.countdown}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               // Main Test Area
@@ -216,27 +253,31 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
             const Icon(Icons.center_focus_strong, size: 80, color: Colors.blue),
             const SizedBox(height: 24),
             Text(
-              "calibration_title".tr(context),
+              'calibration_title'.tr(context),
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Text(
-              "calibration_desc".tr(context),
+              'calibration_desc'.tr(context),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, color: Colors.black87),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
-              onPressed: () {
-                provider.finishCalibration();
-              },
+              onPressed: (provider.currentDistanceCm >= 35 && provider.currentDistanceCm <= 45 && provider.countdown == 0)
+                ? () {
+                    provider.startCountdown(() {
+                      provider.finishCalibration();
+                    });
+                  }
+                : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               ),
-              child: Text("calibration_btn".tr(context)),
+              child: Text(provider.countdown > 0 ? '...' : 'calibration_btn'.tr(context)),
             )
           ],
         ),
@@ -252,17 +293,17 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
           ),
-          child: Text("start_test_btn".tr(context)),
+          child: Text('start_test_btn'.tr(context)),
         ),
       );
     } else if (provider.testStatus == TestStatus.testing) {
       final row = provider.currentRow;
       
-      double distanceMm = provider.currentDistanceCm > 0 ? provider.currentDistanceCm * 10.0 : 400.0;
-      double heightMm = distanceMm * 0.0014544 * (row.distanceRef / 20.0);
+      final distanceMm = provider.currentDistanceCm > 0 ? provider.currentDistanceCm * 10.0 : 400.0;
+      final heightMm = distanceMm * 0.0014544 * (row.distanceRef / 20.0);
       
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-      double logicalPx = (heightMm / 25.4) * (160 * pixelRatio) / pixelRatio; 
+      final logicalPx = (heightMm / 25.4) * (160 * pixelRatio) / pixelRatio; 
 
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -290,14 +331,14 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
-                Text("test_question".tr(context)),
+                Text('test_question'.tr(context)),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildInputBtn(provider, 0, "test_all_correct".tr(context), Colors.green),
-                    _buildInputBtn(provider, 1, "test_1_wrong".tr(context), Colors.orange),
-                    _buildInputBtn(provider, 2, "test_2_wrong".tr(context), Colors.red),
+                    _buildInputBtn(provider, 0, 'test_all_correct'.tr(context), Colors.green),
+                    _buildInputBtn(provider, 1, 'test_1_wrong'.tr(context), Colors.orange),
+                    _buildInputBtn(provider, 2, 'test_2_wrong'.tr(context), Colors.red),
                   ],
                 ),
               ],
@@ -312,7 +353,7 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
           children: [
             const Icon(Icons.check_circle, size: 80, color: Colors.green),
             const SizedBox(height: 24),
-            Text("test_done".tr(context), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text('test_done'.tr(context), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text("${'test_score'.tr(context)} 20/${provider.smallestRowRead}", style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 32),
@@ -321,7 +362,7 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
                 provider.resetTest();
                 Navigator.pop(context);
               },
-              child: Text("test_back".tr(context)),
+              child: Text('test_back'.tr(context)),
             )
           ],
         ),
@@ -336,6 +377,10 @@ class _RefractionTestScreenState extends State<RefractionTestScreen> {
     return ElevatedButton(
       onPressed: !provider.isCalibrated ? null : () {
         provider.submitRowResult(errors);
+        // Refresh profile stats if test finished
+        if (provider.testStatus == TestStatus.finished && mounted) {
+           Provider.of<AuthProvider>(context, listen: false).reloadUser();
+        }
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: isIdeal ? color : color.withOpacity(0.5),

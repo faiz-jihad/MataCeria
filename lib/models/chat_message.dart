@@ -1,16 +1,7 @@
 // lib/models/chat_message.dart
 
 
-class ChatMessage {
-  final int id; // non-nullable, tidak boleh null
-  final String sessionId; // non-nullable
-  final String role; // non-nullable ('user' or 'bot')
-  final String content; // non-nullable
-  final DateTime timestamp; // non-nullable
-  final bool isHelpful; // non-nullable
-  final String? feedbackNote; // nullable (boleh null)
-  final String? messageType; // nullable
-  final List<String>? suggestions; // nullable
+class ChatMessage { // nullable
 
   ChatMessage({
     required this.id, // required berarti harus diisi
@@ -49,6 +40,15 @@ class ChatMessage {
           : null,
     );
   }
+  final int id; // non-nullable, tidak boleh null
+  final String sessionId; // non-nullable
+  final String role; // non-nullable ('user' or 'bot')
+  final String content; // non-nullable
+  final DateTime timestamp; // non-nullable
+  final bool isHelpful; // non-nullable
+  final String? feedbackNote; // nullable (boleh null)
+  final String? messageType; // nullable
+  final List<String>? suggestions;
 
   bool get isUser => role == 'user';
   bool get isBot => role == 'bot';
@@ -65,13 +65,7 @@ class ChatMessage {
   }
 }
 
-class ChatSession {
-  final String sessionId; // non-nullable
-  final DateTime startedAt; // non-nullable
-  final DateTime lastMessage; // non-nullable
-  final int messageCount; // non-nullable
-  final int userMessages; // non-nullable
-  final int botMessages; // non-nullable
+class ChatSession { // non-nullable
 
   ChatSession({
     required this.sessionId,
@@ -96,6 +90,12 @@ class ChatSession {
       botMessages: json['bot_messages'] ?? 0,
     );
   }
+  final String sessionId; // non-nullable
+  final DateTime startedAt; // non-nullable
+  final DateTime lastMessage; // non-nullable
+  final int messageCount; // non-nullable
+  final int userMessages; // non-nullable
+  final int botMessages;
 
   String get formattedDate {
     final now = DateTime.now();

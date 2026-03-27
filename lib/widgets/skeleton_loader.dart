@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
 class SkeletonLoader extends StatefulWidget {
-  final double width;
-  final double height;
-  final BorderRadius? borderRadius;
 
   const SkeletonLoader({
     super.key,
@@ -11,6 +8,9 @@ class SkeletonLoader extends StatefulWidget {
     required this.height,
     this.borderRadius,
   });
+  final double width;
+  final double height;
+  final BorderRadius? borderRadius;
 
   @override
   State<SkeletonLoader> createState() => _SkeletonLoaderState();

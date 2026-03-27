@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 
 class WavePainter extends CustomPainter {
-  final Color color;
 
   WavePainter({required this.color});
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {

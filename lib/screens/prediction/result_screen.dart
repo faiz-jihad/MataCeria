@@ -93,13 +93,13 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 800),
             curve: Curves.elasticOut,
-            builder: (context, double scale, child) {
+            builder: (context, scale, child) {
               return Transform.scale(
                 scale: scale,
                 child: Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF0FDF4),
                     shape: BoxShape.circle,
                   ),
                   child: const CircularProgressIndicator(),
@@ -136,7 +136,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
               tween: Tween<double>(begin: 0, end: 1),
               duration: const Duration(milliseconds: 800),
               curve: Curves.elasticOut,
-              builder: (context, double scale, child) {
+              builder: (context, scale, child) {
                 return Transform.scale(
                   scale: scale,
                   child: Container(
@@ -233,7 +233,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 800),
             curve: Curves.elasticOut,
-            builder: (context, double scale, child) {
+            builder: (context, scale, child) {
               return Transform.scale(
                 scale: scale,
                 child: Container(
@@ -494,26 +494,26 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                         color: const Color(0xFFDCFCE7),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.info_outline,
-                        color: const Color(0xFF059669),
+                        color: Color(0xFF059669),
                         size: 24,
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Catatan Penting',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
+                          SizedBox(height: 4),
+                          Text(
                             'Hasil deteksi bersifat informatif. Konsultasikan dengan dokter untuk diagnosis lebih lanjut.',
                             style: TextStyle(
                               fontSize: 12,

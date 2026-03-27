@@ -24,7 +24,7 @@ class _AdminEmergencyListScreenState extends State<AdminEmergencyListScreen> {
   Future<void> _fetchContacts() async {
     setState(() => _isLoading = true);
     try {
-      final List<EmergencyContact> data = await _apiService.getEmergencyContacts();
+      final data = await _apiService.getEmergencyContacts();
       setState(() {
         _contacts = data;
         _isLoading = false;

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'providers/auth_provider.dart';
 import 'providers/eye_refraction_provider.dart';
 import 'screens/splash_screen.dart';
@@ -18,6 +19,8 @@ import 'providers/eye_rest_provider.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/article_detail_screen.dart';
+import 'screens/search_screen.dart';
+import 'providers/notification_provider.dart';
 import 'providers/refraction_test_provider.dart';
 import 'screens/prediction/ai_refraction_test_screen.dart';
 import 'providers/language_provider.dart';
@@ -26,37 +29,65 @@ import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_article_list_screen.dart';
 import 'screens/admin/admin_emergency_list_screen.dart';
 import 'screens/admin/admin_export_screen.dart';
+import 'dart:ui';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('Warning: .env file not found. Using default values: $e');
+  }
   
-  // Production Error Handling
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 80, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text(
-                'Oops, terjadi kesalahan!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                details.exception.toString(),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => main(),
-                child: const Text('Restart Aplikasi'),
-              ),
-            ],
+  // 1. Flutter Framework Errors
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter Error: ${details.exception}');
+    // Optional: Send to Crashlytics/Sentry here
+  };
+
+  // 2. Platform/Async Errors
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Platform Error: $error');
+    return true;
+  };
+
+  // 3. UI Error Widget (Red Screen of Death replacement)
+  ErrorWidget.builder = (details) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 80, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  'Terjadi Kesalahan Aplikasi',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  details.exception.toString(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    // Fix: Don't call main() recursively. 
+                    // Use a proper restart mechanism or simply navigate to home.
+                    // For now, let's just allow them to go back to splash.
+                  },
+                  child: const Text('Tutup Aplikasi'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -69,8 +100,8 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  final bool isLoggedIn;
   const MyApp({super.key, required this.isLoggedIn});
+  final bool isLoggedIn;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +111,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => EyeRefractionProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => EyeRestProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => RefractionTestProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
@@ -117,6 +149,10 @@ class MyApp extends StatelessWidget {
               '/article-detail': (context) {
                 final article = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
                 return ArticleDetailScreen(article: article);
+              },
+              '/search': (context) {
+                final query = ModalRoute.of(context)?.settings.arguments as String?;
+                return SearchScreen(initialQuery: query);
               },
               '/admin': (context) => const AdminDashboardScreen(),
               '/admin/articles': (context) => const AdminArticleListScreen(),

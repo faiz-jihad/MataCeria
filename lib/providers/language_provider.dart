@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageProvider with ChangeNotifier {
-  String _currentLanguage = 'id';
-  
-  String get currentLanguage => _currentLanguage;
 
   LanguageProvider() {
     _loadLanguage();
   }
+  String _currentLanguage = 'id';
+  
+  String get currentLanguage => _currentLanguage;
 
   Future<void> _loadLanguage() async {
     final prefs = await SharedPreferences.getInstance();

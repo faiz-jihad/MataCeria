@@ -1,12 +1,6 @@
 // lib/models/article_model.dart
 
 class Article {
-  final int id;
-  final String title;
-  final String content;
-  final String? imageUrl;
-  final String? category;
-  final String? date;
 
   Article({
     required this.id,
@@ -27,6 +21,12 @@ class Article {
       date: json['date'] ?? json['created_at'],
     );
   }
+  final int id;
+  final String title;
+  final String content;
+  final String? imageUrl;
+  final String? category;
+  final String? date;
 
   Map<String, dynamic> toJson() {
     return {

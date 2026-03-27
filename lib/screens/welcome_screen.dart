@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../l10n/app_strings.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -12,23 +13,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Map<String, String>> _onboardingData = [
-    {
-      'title': 'Deteksi Mata Mandiri',
-      'description': 'Identifikasi gangguan refraksi mata Anda dengan cepat menggunakan teknologi AI terbaru di mana saja.',
-      'image': 'assets/images/onboarding_illustration2.png',
-    },
-    {
-      'title': 'Asisten AI 24/7',
-      'description': 'Konsultasikan keluhan mata Anda kapan saja dengan bantuan asisten cerdas berbasis medis kami.',
-      'image': 'assets/images/onboarding_illustration2.png',
-    },
-    {
-      'title': 'Monitor Kesehatan',
-      'description': 'Simpan dan pantau riwayat kesehatan mata Anda secara berkala untuk penanganan yang lebih tepat.',
-      'image': 'assets/images/onboarding_illustration2.png',
-    },
-  ];
+  List<Map<String, String>> _getOnboardingData(BuildContext context) {
+    return [
+      {
+        'title': 'welcome_title_1'.tr(context),
+        'description': 'welcome_desc_1'.tr(context),
+        'image': 'assets/images/onboarding_illustration2.png',
+      },
+      {
+        'title': 'welcome_title_2'.tr(context),
+        'description': 'welcome_desc_2'.tr(context),
+        'image': 'assets/images/onboarding_illustration2.png',
+      },
+      {
+        'title': 'welcome_title_3'.tr(context),
+        'description': 'welcome_desc_3'.tr(context),
+        'image': 'assets/images/onboarding_illustration2.png',
+      },
+    ];
+  }
 
   Future<void> _completeOnboarding(BuildContext context, String route) async {
     final prefs = await SharedPreferences.getInstance();
@@ -40,6 +43,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final onboardingData = _getOnboardingData(context);
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -50,12 +55,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             child: PageView.builder(
               controller: _pageController,
               onPageChanged: (index) => setState(() => _currentPage = index),
-              itemCount: _onboardingData.length,
+              itemCount: onboardingData.length,
               itemBuilder: (context, index) {
                 return _buildOnboardingPage(
-                  _onboardingData[index]['title']!,
-                  _onboardingData[index]['description']!,
-                  _onboardingData[index]['image']!,
+                  onboardingData[index]['title']!,
+                  onboardingData[index]['description']!,
+                  onboardingData[index]['image']!,
                 );
               },
             ),
@@ -70,7 +75,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
-                    _onboardingData.length,
+                    onboardingData.length,
                     (index) => _buildDot(index == _currentPage),
                   ),
                 ),
@@ -88,7 +93,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: const Text('Daftar Sekarang', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text('btn_register_now'.tr(context), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -104,7 +109,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       side: BorderSide(color: Colors.blue.shade100),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: const Text('Login ke Akun Saya', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text('btn_login_account'.tr(context), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(height: 10),

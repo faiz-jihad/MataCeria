@@ -1,12 +1,6 @@
 // lib/models/emergency_model.dart
 
 class EmergencyContact {
-  final int id;
-  final String name;
-  final String phone;
-  final String? address;
-  final String? city;
-  final String type;
 
   EmergencyContact({
     required this.id,
@@ -27,6 +21,12 @@ class EmergencyContact {
       type: json['type'],
     );
   }
+  final int id;
+  final String name;
+  final String phone;
+  final String? address;
+  final String? city;
+  final String type;
   
   String get typeName {
     switch (type) {

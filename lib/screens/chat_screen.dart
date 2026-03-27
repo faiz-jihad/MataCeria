@@ -12,14 +12,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 
 class ChatScreen extends StatefulWidget {
-  final String? initialMessage;
-  final String? refractionResult;
 
   const ChatScreen({
     super.key,
     this.initialMessage,
     this.refractionResult,
   });
+  final String? initialMessage;
+  final String? refractionResult;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -111,7 +111,7 @@ class _ChatScreenState extends State<ChatScreen> {
               title: const Text('Ambil Foto'),
               onTap: () async {
                 Navigator.pop(context);
-                final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+                final photo = await _picker.pickImage(source: ImageSource.camera);
                 if (photo != null) setState(() => _selectedFile = photo);
               },
             ),
@@ -120,7 +120,7 @@ class _ChatScreenState extends State<ChatScreen> {
               title: const Text('Galeri Foto'),
               onTap: () async {
                 Navigator.pop(context);
-                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                final image = await _picker.pickImage(source: ImageSource.gallery);
                 if (image != null) setState(() => _selectedFile = image);
               },
             ),
@@ -132,7 +132,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 // Note: File picker might need another package, but XFile from image_picker is fine for media.
                 // For general files, usually file_picker is used.
                 // I'll stick to images for now as a "Photo/File" combo.
-                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                final image = await _picker.pickImage(source: ImageSource.gallery);
                 if (image != null) setState(() => _selectedFile = image);
               },
             ),
@@ -297,7 +297,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
@@ -342,7 +342,7 @@ class _ChatScreenState extends State<ChatScreen> {
             itemBuilder: (context) => [
               PopupMenuItem(
                 child: ListTile(
-                  leading: Icon(Icons.warning, color: Colors.red),
+                  leading: const Icon(Icons.warning, color: Colors.red),
                   title: const Text('Kontak Darurat'),
                   onTap: () {
                     Navigator.pop(context);
@@ -352,7 +352,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               PopupMenuItem(
                 child: ListTile(
-                  leading: Icon(Icons.refresh),
+                  leading: const Icon(Icons.refresh),
                   title: const Text('Sesi Baru'),
                   onTap: () {
                     Navigator.pop(context);

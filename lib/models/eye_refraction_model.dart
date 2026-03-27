@@ -3,9 +3,6 @@
 import 'package:flutter/material.dart';
 
 class EyeRefractionPrediction {
-  final String condition;
-  final double confidence;
-  final String confidencePercent;
 
   EyeRefractionPrediction({
     required this.condition,
@@ -21,9 +18,12 @@ class EyeRefractionPrediction {
           '${(json['confidence'] * 100).toStringAsFixed(1)}%',
     );
   }
+  final String condition;
+  final double confidence;
+  final String confidencePercent;
 
   String get conditionInIndonesian {
-    final Map<String, String> translation = {
+    final translation = <String, String>{
       'myopia': 'Rabun Jauh (Miopi)',
       'hyperopia': 'Rabun Dekat (Hipermetropi)',
       'astigmatism': 'Silinder (Astigmatisme)',
@@ -50,8 +50,6 @@ class EyeRefractionPrediction {
 }
 
 class EyeRefractionResult {
-  final List<EyeRefractionPrediction> predictions;
-  final DateTime processedAt;
 
   EyeRefractionResult({
     required this.predictions,
@@ -59,8 +57,8 @@ class EyeRefractionResult {
   });
 
   factory EyeRefractionResult.fromJson(Map<String, dynamic> json) {
-    var rawPredictions = json['predictions'];
-    List<EyeRefractionPrediction> predictionsList = [];
+    final rawPredictions = json['predictions'];
+    var predictionsList = <EyeRefractionPrediction>[];
     
     if (rawPredictions is List) {
       predictionsList = rawPredictions
@@ -73,6 +71,8 @@ class EyeRefractionResult {
       processedAt: DateTime.parse(json['processed_at'] ?? DateTime.now().toIso8601String()),
     );
   }
+  final List<EyeRefractionPrediction> predictions;
+  final DateTime processedAt;
 
   EyeRefractionPrediction get topPrediction => predictions.first;
 }

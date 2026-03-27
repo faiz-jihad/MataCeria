@@ -3,8 +3,8 @@ import '../../services/api_service.dart';
 import '../../models/article_model.dart';
 
 class AdminArticleFormScreen extends StatefulWidget {
-  final Article? article;
   const AdminArticleFormScreen({super.key, this.article});
+  final Article? article;
 
   @override
   State<AdminArticleFormScreen> createState() => _AdminArticleFormScreenState();

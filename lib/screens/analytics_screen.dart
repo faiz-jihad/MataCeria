@@ -57,7 +57,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         });
       }
     } catch (e) {
-      print('Error loading analytics: $e');
+      debugPrint('Error loading analytics: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -214,7 +214,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     child: Center(
                       child: Text(
                         '${_userAnalytics!.topQueries.indexOf(q) + 1}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -374,7 +374,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             children: [
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),

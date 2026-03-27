@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../l10n/app_strings.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,20 +44,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email tidak boleh kosong';
+      return 'err_email_empty'.tr(context);
     }
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Format email tidak valid';
+      return 'err_email_invalid'.tr(context);
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password tidak boleh kosong';
+      return 'err_pass_empty'.tr(context);
     }
     if (value.length < 6) {
-      return 'Password minimal 6 karakter';
+      return 'err_pass_long'.tr(context); // I should add this to AppStrings
     }
     return null;
   }
@@ -122,14 +123,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 10),
                         _buildSocialTextField(
                           controller: _emailController,
-                          hintText: 'Email address',
+                          hintText: 'email_hint'.tr(context),
                           prefixIcon: Icons.email_outlined,
                           validator: _validateEmail,
                         ),
                         const SizedBox(height: 16),
                         _buildSocialTextField(
                           controller: _passwordController,
-                          hintText: 'Password',
+                          hintText: 'password_hint'.tr(context),
                           prefixIcon: Icons.lock_outline,
                           obscureText: _obscurePassword,
                           suffixIcon: IconButton(
@@ -171,9 +172,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: authProvider.isLoading
                                 ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text(
-                                    'Login',
-                                    style: TextStyle(
+                                : Text(
+                                    'btn_login'.tr(context),
+                                    style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -224,12 +225,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text("Don't have an account? ", style: TextStyle(color: Colors.grey)),
+                            Text('dont_have_account'.tr(context), style: const TextStyle(color: Colors.grey)),
                             GestureDetector(
                               onTap: () => Navigator.pushNamed(context, '/register'),
-                              child: const Text(
-                                "Register",
-                                style: TextStyle(
+                              child: Text(
+                                'register_title'.tr(context),
+                                style: const TextStyle(
                                   color: Color(0xFF2563EB),
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -326,7 +327,7 @@ class BackgroundPatternPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
-    for (double i = -size.width; i < size.width; i += 30) {
+    for (var i = -size.width; i < size.width; i += 30) {
       canvas.drawLine(
         Offset(i, 0),
         Offset(i + size.height, size.height),

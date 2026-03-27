@@ -25,7 +25,7 @@ class _AdminArticleListScreenState extends State<AdminArticleListScreen> {
   Future<void> _fetchArticles() async {
     setState(() => _isLoading = true);
     try {
-      final List<dynamic> data = await _apiService.getArticles();
+      final data = await _apiService.getArticles();
       setState(() {
         _articles = data.map((json) => Article.fromJson(json)).toList();
         _isLoading = false;

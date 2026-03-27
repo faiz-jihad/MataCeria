@@ -3,8 +3,8 @@ import '../../services/api_service.dart';
 import '../../models/emergency_model.dart';
 
 class AdminEmergencyFormScreen extends StatefulWidget {
-  final EmergencyContact? contact;
   const AdminEmergencyFormScreen({super.key, this.contact});
+  final EmergencyContact? contact;
 
   @override
   State<AdminEmergencyFormScreen> createState() => _AdminEmergencyFormScreenState();
@@ -109,7 +109,7 @@ class _AdminEmergencyFormScreenState extends State<AdminEmergencyFormScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedType,
+                initialValue: _selectedType,
                 decoration: InputDecoration(
                   labelText: 'Tipe',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

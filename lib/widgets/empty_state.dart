@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 
 class EmptyState extends StatelessWidget {
-  final String title;
-  final String message;
-  final IconData icon;
-  final String? actionLabel;
-  final VoidCallback? onAction;
 
   const EmptyState({
     super.key,
@@ -15,6 +10,11 @@ class EmptyState extends StatelessWidget {
     this.actionLabel,
     this.onAction,
   });
+  final String title;
+  final String message;
+  final IconData icon;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {

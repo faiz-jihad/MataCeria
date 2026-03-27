@@ -1,11 +1,16 @@
-// lib/screens/home_screen.dart (FIXED VERSION)
+// lib/screens/home_screen.dart (IMPROVED VERSION)
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import 'package:flutter/services.dart';
 import '../providers/eye_refraction_provider.dart';
 import '../services/api_service.dart';
 import '../providers/eye_rest_provider.dart';
+import '../widgets/custom_bottom_nav_bar.dart';
+import '../widgets/eye_rest_dialog.dart';
+import '../widgets/quick_detect_dialog.dart';
+import '../utils/constants.dart';
+import '../utils/analytics_helper.dart';
 import 'home_tab.dart';
 import 'prediction_tab.dart';
 import 'profile_tab.dart';
@@ -18,75 +23,112 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   int _selectedIndex = 0;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late List<AnimationController> _bottomNavControllers;
-
+  late final AnimationController _pageTransitionController;
+  late final List<AnimationController> _bottomNavControllers;
+  late final PageController _pageController;
+  
   bool _mlServiceAvailable = false;
   bool _isCheckingService = true;
   int _unreadChatCount = 0;
-  late List<Widget> _screens;
+  late final List<Widget> _screens;
+  
+  // Tab controllers
+  final Map<int, GlobalKey> _tabKeys = {
+    0: GlobalKey(),
+    1: GlobalKey(),
+    2: GlobalKey(),
+  };
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeScreens();
+    _initializeControllers();
+    _loadInitialData();
+    _setupEventListeners();
+  }
+
+  void _initializeScreens() {
     _screens = [
-      HomeTab(onTabSelected: _onNavItemTapped),
-      const PredictionTab(),
-      const ProfileTab(),
+      HomeTab(
+        key: _tabKeys[0],
+        onTabSelected: _onNavItemTapped,
+      ),
+      const PredictionTab(key: ValueKey('prediction_tab')),
+      const ProfileTab(key: ValueKey('profile_tab')),
     ];
-    _initAnimations();
-    _checkMLService();
-    _loadUnreadChatCount();
-    
-    // Listen for Eye Rest reminders
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _setupEyeRestListener();
-    });
+    _pageController = PageController(initialPage: _selectedIndex);
   }
 
-  void _setupEyeRestListener() {
-    final eyeRestProvider = Provider.of<EyeRestProvider>(context, listen: false);
-    eyeRestProvider.addListener(() {
-      if (eyeRestProvider.shouldShowAlert && mounted) {
-        _showEyeRestDialog(context, eyeRestProvider);
-      }
-    });
-  }
-
-  void _initAnimations() {
-    _animationController = AnimationController(
+  void _initializeControllers() {
+    _pageTransitionController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
+      duration: const Duration(milliseconds: 400),
+    )..forward();
 
     _bottomNavControllers = List.generate(3, (index) {
       return AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 250),
       );
     });
+  }
 
-    _animationController.forward();
+  Future<void> _loadInitialData() async {
+    await Future.wait([
+      _checkMLService(),
+      _loadUnreadChatCount(),
+    ]);
+  }
+
+  void _setupEventListeners() {
+    // Listen for eye rest reminders
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final eyeRestProvider = Provider.of<EyeRestProvider>(context, listen: false);
+      eyeRestProvider.addListener(_handleEyeRestAlert);
+    });
+  }
+
+  void _handleEyeRestAlert() {
+    final eyeRestProvider = Provider.of<EyeRestProvider>(context, listen: false);
+    if (eyeRestProvider.shouldShowAlert && mounted) {
+      _showEyeRestDialog(context, eyeRestProvider);
+    }
   }
 
   Future<void> _checkMLService() async {
+    if (!mounted) return;
+    
     setState(() => _isCheckingService = true);
-    final mlProvider = Provider.of<EyeRefractionProvider>(
-      context,
-      listen: false,
-    );
-    final available = await mlProvider.checkMLHealth();
-    if (mounted) {
-      setState(() {
-        _mlServiceAvailable = available;
-        _isCheckingService = false;
-      });
+    
+    try {
+      final mlProvider = Provider.of<EyeRefractionProvider>(
+        context,
+        listen: false,
+      );
+      final available = await mlProvider.checkMLHealth();
+      
+      if (mounted) {
+        setState(() {
+          _mlServiceAvailable = available;
+          _isCheckingService = false;
+        });
+        
+        // Track service availability
+        AnalyticsHelper.trackEvent('ml_service_check', {
+          'available': available,
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _mlServiceAvailable = false;
+          _isCheckingService = false;
+        });
+      }
     }
   }
 
@@ -94,366 +136,173 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       final count = await ApiService().getUnreadChatCount();
       if (mounted) {
-        setState(() {
-          _unreadChatCount = count;
-        });
+        setState(() => _unreadChatCount = count);
       }
-    } catch (e) {}
+    } catch (e) {
+      // Silently fail - chat feature is optional
+      debugPrint('Failed to load unread chat count: $e');
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _refreshData();
+        break;
+        case AppLifecycleState.paused:
+        case AppLifecycleState.inactive:
+        case AppLifecycleState.detached:
+        case AppLifecycleState.hidden:
+          break;
+      }
+  }
+
+  Future<void> _refreshData() async {
+    await Future.wait([
+      _checkMLService(),
+      _loadUnreadChatCount(),
+    ]);
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _pageTransitionController.dispose();
+    _pageController.dispose();
     for (var controller in _bottomNavControllers) {
       controller.dispose();
     }
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   void _onNavItemTapped(int index) {
     if (_selectedIndex == index) return;
-
+    
+    // Animate bottom nav icon
     _bottomNavControllers[index].forward().then((_) {
       _bottomNavControllers[index].reverse();
     });
+    
+    // Animate page transition
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
+    );
+    
+    setState(() => _selectedIndex = index);
+    
+    // Track navigation
+    AnalyticsHelper.trackScreenView(_getScreenName(index));
+  }
 
-    setState(() {
-      _selectedIndex = index;
-    });
+  void _onPageChanged(int index) {
+    if (_selectedIndex == index) return;
+    
+    setState(() => _selectedIndex = index);
+    
+    // Track navigation
+    AnalyticsHelper.trackScreenView(_getScreenName(index));
+  }
+
+  String _getScreenName(int index) {
+    switch (index) {
+      case 0: return 'home_tab';
+      case 1: return 'prediction_tab';
+      case 2: return 'profile_tab';
+      default: return 'unknown';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
       child: Scaffold(
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0.05, 0),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOut,
-                  ),
-                ),
-                child: child,
-              ),
-            );
-          },
-          child: _screens[_selectedIndex],
+        body: PageView(
+          controller: _pageController,
+          onPageChanged: _onPageChanged,
+          physics: const BouncingScrollPhysics(),
+          children: _screens,
         ),
-        bottomNavigationBar: _buildBottomNavBar(),
-        floatingActionButton: _selectedIndex == 1
-            ? FloatingActionButton.extended(
-                onPressed: () => _showQuickDetectDialog(context),
-                icon: const Icon(Icons.add_a_photo_outlined),
-                label: const Text('New Report'),
-                backgroundColor: const Color(0xFF2563EB),
-                foregroundColor: Colors.white,
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              )
-            : null,
+        bottomNavigationBar: CustomBottomNavBar(
+          currentIndex: _selectedIndex,
+          onTap: _onNavItemTapped,
+          items: _buildNavItems(),
+        ),
+        floatingActionButton: _buildFloatingActionButton(),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
 
-  Widget _buildBottomNavBar() {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
+  Widget? _buildFloatingActionButton() {
+    if (_selectedIndex != 1) return null;
+    
+    return FloatingActionButton.extended(
+      onPressed: () => _showQuickDetectDialog(context),
+      icon: const Icon(Icons.add_a_photo_outlined),
+      label: Text('new_report'.tr(context)),
+      backgroundColor: AppColors.primaryBlue,
+      foregroundColor: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onNavItemTapped,
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF2563EB),
-          unselectedItemColor: Colors.grey.shade400,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
-          elevation: 0,
-          items: [
-            _buildAnimatedNavItem(
-              index: 0,
-              icon: Icons.grid_view_outlined,
-              activeIcon: Icons.grid_view_rounded,
-              label: 'nav_home'.tr(context),
-            ),
-            _buildAnimatedNavItem(
-              index: 1,
-              icon: Icons.assignment_outlined,
-              activeIcon: Icons.assignment_rounded,
-              label: 'nav_history'.tr(context),
-            ),
-            _buildAnimatedNavItem(
-              index: 2,
-              icon: Icons.person_outline,
-              activeIcon: Icons.person,
-              label: 'nav_profile'.tr(context),
-            ),
-          ],
-        ),
-      ),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
     );
   }
 
-  BottomNavigationBarItem _buildAnimatedNavItem({
-    required int index,
-    required IconData icon,
-    required IconData activeIcon,
-    required String label,
-  }) {
-    return BottomNavigationBarItem(
-      icon: AnimatedBuilder(
-        animation: _bottomNavControllers[index],
-        builder: (context, child) {
-          return Transform.scale(
-            scale: 1 + (_bottomNavControllers[index].value * 0.2),
-            child: Icon(_selectedIndex == index ? activeIcon : icon),
-          );
-        },
+  List<CustomNavItem> _buildNavItems() {
+    return [
+      CustomNavItem(
+        icon: Icons.grid_view_outlined,
+        activeIcon: Icons.grid_view_rounded,
+        label: 'nav_home'.tr(context),
       ),
-      label: label,
-    );
+      CustomNavItem(
+        icon: Icons.assignment_outlined,
+        activeIcon: Icons.assignment_rounded,
+        label: 'nav_history'.tr(context),
+        badgeCount: _unreadChatCount,
+      ),
+      CustomNavItem(
+        icon: Icons.person_outline,
+        activeIcon: Icons.person,
+        label: 'nav_profile'.tr(context),
+      ),
+    ];
   }
 
   void _showQuickDetectDialog(BuildContext context) {
-    showGeneralDialog(
+    showDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.black.withOpacity(0.5),
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (context, animation1, animation2) => Container(),
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-          child: FadeTransition(
-            opacity: animation,
-            child: AlertDialog(
-              title: const Row(
-                children: [
-                  Icon(Icons.add_a_photo, color: Color(0xFF2563EB)),
-                  SizedBox(width: 8),
-                  Text(
-                    'Create New Report',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildDialogOption(
-                    icon: Icons.camera_alt,
-                    color: const Color(0xFF2563EB),
-                    title: 'Kamera',
-                    subtitle: 'Ambil foto langsung dengan kamera',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/camera');
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _buildDialogOption(
-                    icon: Icons.photo_library,
-                    color: const Color(0xFF10B981),
-                    title: 'Galeri',
-                    subtitle: 'Pilih foto dari galeri',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/camera');
-                    },
-                  ),
-                  if (_isCheckingService)
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else if (!_mlServiceAvailable) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.orange.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Mode offline: Hasil akan menggunakan data contoh. Fitur AI tidak tersedia.',
-                              style: TextStyle(
-                                color: Colors.orange.shade700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey.shade700,
-                  ),
-                  child: const Text('Tutup'),
-                ),
-                if (!_mlServiceAvailable)
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _checkMLService();
-                    },
-                    child: const Text('Cek Koneksi'),
-                  ),
-              ],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDialogOption({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.2)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: color),
-            ],
-          ),
-        ),
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (dialogContext) => QuickDetectDialog(
+        mlServiceAvailable: _mlServiceAvailable,
+        isCheckingService: _isCheckingService,
+        onRetryCheck: _checkMLService,
       ),
     );
   }
 
   void _showEyeRestDialog(BuildContext context, EyeRestProvider provider) {
-    if (!context.mounted) return;
-    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: const Row(
-          children: [
-            Icon(Icons.remove_red_eye, color: Color(0xFF2563EB), size: 30),
-            SizedBox(width: 12),
-            Text('Waktunya Istirahat!', style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.spa_rounded, size: 80, color: Colors.green),
-            const SizedBox(height: 16),
-            const Text(
-              'Anda sudah menggunakan aplikasi cukup lama. Ikuti aturan 20-20-20:',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Setiap 20 menit, lihatlah objek sejauh 20 kaki (6 meter) selama 20 detik.',
-              style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2563EB)),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              provider.dismissAlert();
-              Navigator.pop(context);
-            },
-            child: const Text('Sudah Istirahat'),
-          ),
-        ],
+      builder: (dialogContext) => EyeRestDialog(
+        onDismiss: () {
+          provider.dismissAlert();
+          Navigator.pop(dialogContext);
+        },
       ),
     );
   }

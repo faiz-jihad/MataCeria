@@ -1,11 +1,71 @@
 import 'dart:convert';
 import 'dart:isolate';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 
 class CameraProcessor {
+  // Convert CameraImage to InputImage for ML Kit
+  static InputImage getInputImageFromCameraImage({
+    required CameraImage cameraImage,
+    required int sensorOrientation,
+  }) {
+    final allBytes = WriteBuffer();
+    for (final plane in cameraImage.planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
+
+    final imageSize = Size(cameraImage.width.toDouble(), cameraImage.height.toDouble());
+
+    final rotation = InputImageRotationValue.fromRawValue(sensorOrientation) 
+        ?? InputImageRotation.rotation0deg;
+
+    final format = InputImageFormatValue.fromRawValue(cameraImage.format.raw) 
+        ?? InputImageFormat.yuv420;
+
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: imageSize,
+        rotation: rotation,
+        format: format,
+        bytesPerRow: cameraImage.planes[0].bytesPerRow,
+      ),
+    );
+  }
+
+  // Convert full YUV420 to JPEG Base64 (runs in isolate)
+  static Future<String?> convertFullImageToBase64({
+    required CameraImage cameraImage,
+    required int sensorOrientation,
+  }) async {
+    // Need to pass raw plane bytes
+    final planesInfo = <Map<String, dynamic>>[];
+    final planesBytes = <Uint8List>[];
+    
+    for (var plane in cameraImage.planes) {
+      planesInfo.add({
+        'bytesPerRow': plane.bytesPerRow,
+        'bytesPerPixel': plane.bytesPerPixel,
+      });
+      planesBytes.add(plane.bytes);
+    }
+    
+    final isolateData = <String, dynamic>{
+      'width': cameraImage.width,
+      'height': cameraImage.height,
+      'planesInfo': planesInfo,
+      'planesBytes': planesBytes,
+      'sensorOrientation': sensorOrientation,
+      'isFullImage': true,
+    };
+
+    return await Isolate.run(() => _processInIsolate(isolateData));
+  }
+
   // Convert YUV420 to RGB Image (runs in isolate)
   static Future<String?> processEyeRegionBase64({
     required CameraImage cameraImage,
@@ -22,8 +82,8 @@ class CameraProcessor {
     };
 
     // Need to pass raw plane bytes
-    final List<Map<String, dynamic>> planesInfo = [];
-    final List<Uint8List> planesBytes = [];
+    final planesInfo = <Map<String, dynamic>>[];
+    final planesBytes = <Uint8List>[];
     
     for (var plane in cameraImage.planes) {
       planesInfo.add({
@@ -33,7 +93,7 @@ class CameraProcessor {
       planesBytes.add(plane.bytes);
     }
     
-    final Map<String, dynamic> isolateData = {
+    final isolateData = <String, dynamic>{
       'width': cameraImage.width,
       'height': cameraImage.height,
       'planesInfo': planesInfo,
@@ -54,7 +114,7 @@ class CameraProcessor {
       final List<Uint8List> planesBytes = data['planesBytes'];
 
       // 1. Convert YUV to RGB using `image` package
-      img.Image image = _convertYUV420ToImage(
+      var image = _convertYUV420ToImage(
         width: width,
         height: height,
         plane0: planesBytes[0],
@@ -71,8 +131,12 @@ class CameraProcessor {
          image = img.copyRotate(image, angle: rotationAngle);
       }
       
-      // If Front camera, image might need to be flipped horizontally depending on rendering, 
-      // but usually for ML we just need the crop of the face.
+      if (data['isFullImage'] == true) {
+        // Just resize a bit to save bandwidth if full image
+        final resized = img.copyResize(image, width: 480); // 480px width is enough for face detection
+        final List<int> jpegBytes = img.encodeJpg(resized, quality: 70);
+        return base64Encode(jpegBytes);
+      }
 
       // 3. Crop to face region (with some padding for eyes)
       // Note: Bounding boxes from ML Kit are relative to the *rotated* image size
@@ -80,10 +144,10 @@ class CameraProcessor {
       int cropX = bbox['left'];
       int cropY = bbox['top'];
       int cropWidth = bbox['right'] - bbox['left'];
-      int cropHeight = bbox['bottom'] - bbox['top'];
+      final int cropHeight = bbox['bottom'] - bbox['top'];
 
       // Focus more on upper half of face (eyes)
-      int eyeRegionHeight = (cropHeight * 0.6).toInt();
+      var eyeRegionHeight = (cropHeight * 0.6).toInt();
       
       // Ensure bounds
       cropX = cropX.clamp(0, image.width - 1);
@@ -91,7 +155,7 @@ class CameraProcessor {
       cropWidth = cropWidth.clamp(1, image.width - cropX);
       eyeRegionHeight = eyeRegionHeight.clamp(1, image.height - cropY);
 
-      img.Image cropped = img.copyCrop(
+      final cropped = img.copyCrop(
         image,
         x: cropX,
         y: cropY,
@@ -100,7 +164,7 @@ class CameraProcessor {
       );
 
       // 4. Resize to 224x224 (Standard for many CNNs)
-      img.Image resized = img.copyResize(cropped, width: 224, height: 224);
+      final resized = img.copyResize(cropped, width: 224, height: 224);
 
       // 5. Encode to JPEG
       final List<int> jpegBytes = img.encodeJpg(resized, quality: 80);
@@ -108,7 +172,7 @@ class CameraProcessor {
       // 6. Convert to Base64
       return base64Encode(jpegBytes);
     } catch (e) {
-      print("Isolate processing error: \$e");
+      debugPrint('Isolate processing error: $e');
       return null;
     }
   }
@@ -124,27 +188,27 @@ class CameraProcessor {
     required int bytesPerRow1,
     required int? bytesPerPixel1,
   }) {
-    final img.Image image = img.Image(width: width, height: height);
+    final image = img.Image(width: width, height: height);
 
-    final int uvRowStride = bytesPerRow1;
-    final int? uvPixelStride = bytesPerPixel1;
+    final uvRowStride = bytesPerRow1;
+    final uvPixelStride = bytesPerPixel1;
 
-    for (int y = 0; y < height; y++) {
-      int uvRow = y >> 1;
-      for (int x = 0; x < width; x++) {
-        int uvCol = x >> 1;
-        int indexY = y * bytesPerRow0 + x;
-        int indexUV = uvRow * uvRowStride + uvCol * (uvPixelStride ?? 2);
+    for (var y = 0; y < height; y++) {
+      final uvRow = y >> 1;
+      for (var x = 0; x < width; x++) {
+        final uvCol = x >> 1;
+        final indexY = y * bytesPerRow0 + x;
+        final indexUV = uvRow * uvRowStride + uvCol * (uvPixelStride ?? 2);
 
         // Calculate Y, U, V
-        int yValue = plane0[indexY];
-        int uValue = plane1[indexUV];
-        int vValue = plane2[indexUV];
+        final yValue = plane0[indexY];
+        final uValue = plane1[indexUV];
+        final vValue = plane2[indexUV];
 
         // Convert YUV to RGB
-        int r = (yValue + 1.402 * (vValue - 128)).toInt();
-        int g = (yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128)).toInt();
-        int b = (yValue + 1.772 * (uValue - 128)).toInt();
+        var r = (yValue + 1.402 * (vValue - 128)).toInt();
+        var g = (yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128)).toInt();
+        var b = (yValue + 1.772 * (uValue - 128)).toInt();
 
         // Clamp
         r = r.clamp(0, 255);

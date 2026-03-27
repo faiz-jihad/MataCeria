@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../l10n/app_strings.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -41,7 +42,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_formKey.currentState!.validate()) {
       if (!_agreeTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Anda harus menyetujui Syarat & Ketentuan')),
+          SnackBar(
+            content: Text('err_agree_terms'.tr(context)), // Need to add to AppStrings
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         return;
       }
@@ -59,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (success) {
         if (mounted) {
-          _showSuccessSnackBar('Pendaftaran berhasil! Silakan login.');
+          _showSuccessSnackBar('reg_success_msg'.tr(context)); // Need to add to AppStrings
           Navigator.pushReplacementNamed(context, '/login');
         }
       }
@@ -72,47 +77,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
         content: Text(message),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   String? _validateName(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Nama lengkap tidak boleh kosong';
+      return 'err_name_empty'.tr(context);
+    }
+    if (value.length < 3) {
+      return 'err_name_short'.tr(context); // Add to AppStrings
     }
     return null;
   }
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email tidak boleh kosong';
+      return 'err_email_empty'.tr(context);
     }
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Format email tidak valid';
+      return 'err_email_invalid'.tr(context);
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password tidak boleh kosong';
+      return 'err_pass_empty'.tr(context);
     }
     if (value.length < 6) {
-      return 'Password minimal 6 karakter';
+      return 'err_pass_long'.tr(context);
+    }
+    if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)').hasMatch(value)) {
+      return 'err_pass_complex'.tr(context); // Add to AppStrings
     }
     return null;
   }
 
   String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'err_pass_empty'.tr(context);
+    }
     if (value != _passwordController.text) {
-      return 'Konfirmasi password tidak cocok';
+      return 'err_pass_match'.tr(context);
     }
     return null;
   }
 
   String? _validateAge(String? value) {
-    if (value == null || value.isEmpty) return 'Umur tidak boleh kosong';
-    if (int.tryParse(value) == null) return 'Umur harus berupa angka';
+    if (value == null || value.isEmpty) {
+      return 'err_age_empty'.tr(context); // Add to AppStrings
+    }
+    final age = int.tryParse(value);
+    if (age == null) {
+      return 'err_age_invalid'.tr(context); // Add to AppStrings
+    }
+    if (age < 5 || age > 100) {
+      return 'err_age_range'.tr(context); // Add to AppStrings
+    }
     return null;
   }
 
@@ -125,7 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           return SingleChildScrollView(
             child: Column(
               children: [
-                // Curved Blue Header with Illustration
+                // Curved Blue Header with Illustration (Matched with Login)
                 Stack(
                   children: [
                     Container(
@@ -175,62 +198,72 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       children: [
                         const SizedBox(height: 10),
+                        
+                        // Full Name Field
                         _buildSocialTextField(
                           controller: _nameController,
-                          hintText: 'Nama Lengkap',
+                          hintText: 'name_hint'.tr(context),
                           prefixIcon: Icons.person_outline,
                           validator: _validateName,
                         ),
+                        
                         const SizedBox(height: 16),
+                        
+                        // Email Field
                         _buildSocialTextField(
                           controller: _emailController,
-                          hintText: 'Alamat Email',
+                          hintText: 'email_hint'.tr(context),
                           prefixIcon: Icons.email_outlined,
                           validator: _validateEmail,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSocialTextField(
-                          controller: _ageController,
-                          hintText: 'Umur',
-                          prefixIcon: Icons.cake_outlined,
-                          keyboardType: TextInputType.number,
-                          validator: _validateAge,
+                          keyboardType: TextInputType.emailAddress,
                         ),
                         const SizedBox(height: 16),
                         
-                        // Dropdown Kelamin
+                        // Age Field
+                        _buildSocialTextField(
+                          controller: _ageController,
+                          hintText: 'age_hint'.tr(context),
+                          prefixIcon: Icons.cake_outlined,
+                          validator: _validateAge,
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Gender Dropdown
                         _buildDropdownField(
                           value: _gender,
-                          hintText: 'Jenis Kelamin',
+                          hintText: 'prof_gender'.tr(context),
                           prefixIcon: Icons.wc_outlined,
                           items: ['Laki-laki', 'Perempuan'],
                           onChanged: (val) => setState(() => _gender = val!),
                         ),
                         const SizedBox(height: 16),
 
-                        // Dropdown Pendidikan
+                        // Education Dropdown
                         _buildDropdownField(
                           value: _education,
-                          hintText: 'Jenjang Pendidikan',
+                          hintText: 'prof_education'.tr(context),
                           prefixIcon: Icons.school_outlined,
                           items: ['SD', 'SMP', 'SMA', 'D3', 'D4/S1', 'S2/S3', 'Lainnya'],
                           onChanged: (val) => setState(() => _education = val!),
                         ),
                         const SizedBox(height: 16),
 
-                        // Dropdown Pekerjaan
+                        // Occupation Dropdown
                         _buildDropdownField(
                           value: _occupation,
-                          hintText: 'Status Pekerjaan',
+                          hintText: 'prof_job'.tr(context),
                           prefixIcon: Icons.work_outline,
                           items: ['Pelajar/Mahasiswa', 'Karyawan Swasta', 'PNS', 'Wiraswasta', 'Lainnya'],
                           onChanged: (val) => setState(() => _occupation = val!),
                         ),
-                        const SizedBox(height: 16),
-
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Password Field
                         _buildSocialTextField(
                           controller: _passwordController,
-                          hintText: 'Password',
+                          hintText: 'password_hint'.tr(context),
                           prefixIcon: Icons.lock_outline,
                           obscureText: _obscurePassword,
                           suffixIcon: IconButton(
@@ -244,16 +277,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           validator: _validatePassword,
                         ),
                         const SizedBox(height: 16),
+                        
+                        // Confirm Password Field
                         _buildSocialTextField(
                           controller: _confirmPasswordController,
-                          hintText: 'Konfirmasi Password',
-                          prefixIcon: Icons.lock_reset,
-                          obscureText: _confirmPasswordController.text != _passwordController.text ? _obscureConfirmPassword : _obscureConfirmPassword, // Logic simplified
+                          hintText: 'confirm_password_hint'.tr(context), // Add to AppStrings
+                          prefixIcon: Icons.lock_reset_outlined,
+                          obscureText: _obscureConfirmPassword,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              size: 20,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                          ),
                           validator: _validateConfirmPassword,
                         ),
 
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 24),
                         
+                        // Terms and Conditions Matching Login style
                         Row(
                           children: [
                             Checkbox(
@@ -262,10 +306,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               activeColor: const Color(0xFF2563EB),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                             ),
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                'Saya menyetujui Syarat & Ketentuan',
-                                style: TextStyle(color: Colors.grey, fontSize: 13),
+                                'agree_terms_text'.tr(context), // Add to AppStrings
+                                style: const TextStyle(color: Colors.grey, fontSize: 13),
                               ),
                             ),
                           ],
@@ -282,7 +326,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                         const SizedBox(height: 24),
                         
-                        // Main Register Button
+                        // Main Register Button (Matched with Login)
                         SizedBox(
                           width: double.infinity,
                           height: 56,
@@ -299,9 +343,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             child: authProvider.isLoading
                                 ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text(
-                                    'Register',
-                                    style: TextStyle(
+                                : Text(
+                                    'btn_register'.tr(context),
+                                    style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -314,12 +358,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Text("Already have an account? ", style: TextStyle(color: Colors.grey)),
+                            Text('already_have_account'.tr(context), style: const TextStyle(color: Colors.grey)),
                             GestureDetector(
                               onTap: () => Navigator.pushNamed(context, '/login'),
-                              child: const Text(
-                                "Login",
-                                style: TextStyle(
+                              child: Text(
+                                'login_title'.tr(context),
+                                style: const TextStyle(
                                   color: Color(0xFF2563EB),
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -348,16 +392,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     Widget? suffixIcon,
     String? Function(String?)? validator,
     TextInputType keyboardType = TextInputType.text,
-    bool readOnly = false,
-    VoidCallback? onTap,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
       validator: validator,
       keyboardType: keyboardType,
-      readOnly: readOnly,
-      onTap: onTap,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
@@ -390,7 +430,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required Function(String?) onChanged,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(16),
@@ -398,14 +438,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           decoration: InputDecoration(
             border: InputBorder.none,
             prefixIcon: Icon(prefixIcon, color: Colors.grey.shade400, size: 22),
           ),
           hint: Text(hintText, style: TextStyle(color: Colors.grey.shade400, fontSize: 15)),
-          items: items.map((String item) {
-            return DropdownMenuItem(value: item, child: Text(item, style: const TextStyle(fontSize: 15)));
+          items: items.map((item) {
+            return DropdownMenuItem(
+              value: item,
+              child: Text(item, style: const TextStyle(fontSize: 15)),
+            );
           }).toList(),
           onChanged: onChanged,
         ),

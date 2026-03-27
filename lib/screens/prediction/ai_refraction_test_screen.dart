@@ -1,12 +1,14 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'dart:async';
 import 'package:camera/camera.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/refraction_test_provider.dart';
-import '../../utils/camera_processor.dart';
 import '../../l10n/app_strings.dart';
+import '../../utils/camera_processor.dart';
+
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
 class AIRefractionTestScreen extends StatefulWidget {
   const AIRefractionTestScreen({super.key});
@@ -17,13 +19,9 @@ class AIRefractionTestScreen extends StatefulWidget {
 
 class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
   CameraController? _cameraController;
-  final FaceDetector _faceDetector = FaceDetector(
-    options: FaceDetectorOptions(
-      enableLandmarks: true,
-      performanceMode: FaceDetectorMode.accurate,
-    ),
-  );
+  FaceDetector? _faceDetector;
   bool _isDetecting = false;
+  DateTime? _lastDetectionTime;
   bool _cameraInitialized = false;
 
   @override
@@ -55,75 +53,95 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
 
       setState(() => _cameraInitialized = true);
 
-      _cameraController!.startImageStream((CameraImage image) {
+      unawaited(_cameraController!.startImageStream((image) {
         if (_isDetecting) return;
         _isDetecting = true;
         _processCameraImage(image);
-      });
+      }));
     } catch (e) {
-      debugPrint("Camera Error: $e");
+      debugPrint('Camera Error: $e');
     }
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
     try {
       final provider = Provider.of<RefractionTestProvider>(context, listen: false);
-
-      final WriteBuffer allBytes = WriteBuffer();
-      for (final Plane plane in image.planes) {
-        allBytes.putUint8List(plane.bytes);
-      }
-      final bytes = allBytes.done().buffer.asUint8List();
-
-      final Size imageSize = Size(image.width.toDouble(), image.height.toDouble());
+      final now = DateTime.now();
       
-      final sensorOrientation = _cameraController!.description.sensorOrientation;
-      final InputImageRotation imageRotation = _getRotation(sensorOrientation);
-      final InputImageFormat inputImageFormat = InputImageFormat.yuv420;
+      if (_lastDetectionTime != null && 
+          now.difference(_lastDetectionTime!).inMilliseconds < 500) {
+        _isDetecting = false;
+        return;
+      }
+      _lastDetectionTime = now;
 
-      final inputImageData = InputImageMetadata(
-        size: imageSize,
-        rotation: imageRotation,
-        format: inputImageFormat,
-        bytesPerRow: image.planes[0].bytesPerRow,
+      // Initialize FaceDetector if needed
+      _faceDetector ??= FaceDetector(
+        options: FaceDetectorOptions(
+          enableContours: false,
+          enableClassification: false,
+          performanceMode: FaceDetectorMode.fast,
+        ),
       );
 
-      final inputImage = InputImage.fromBytes(bytes: bytes, metadata: inputImageData);
-      final faces = await _faceDetector.processImage(inputImage);
+      final inputImage = CameraProcessor.getInputImageFromCameraImage(
+        cameraImage: image,
+        sensorOrientation: _cameraController!.description.sensorOrientation,
+      );
+
+      final faces = await _faceDetector!.processImage(inputImage);
       
-      if (faces.isNotEmpty && mounted) {
-        final face = faces.first;
-        provider.updateDistance(face);
+      if (faces.isEmpty) {
+        if (mounted && provider.testStatus != TestStatus.finished) {
+           provider.updateDistanceLocally(0.0, 0.0);
+        }
+        _isDetecting = false;
+        return;
+      }
+
+      final targetFace = faces.first;
+
+      // 1. Update Distance
+      final fullBase64 = await CameraProcessor.convertFullImageToBase64(
+        cameraImage: image,
+        sensorOrientation: _cameraController!.description.sensorOrientation,
+      );
+      
+      if (fullBase64 != null && mounted) {
+        await provider.updateDistanceRemote(fullBase64);
         
+        // 2. Process AI Result if finished
         if (provider.testStatus == TestStatus.finished && !provider.isProcessingAI && provider.aiResultCategory == null) {
-          _cameraController?.stopImageStream();
-          final String deviceInfo = Platform.operatingSystem;
+          unawaited(_cameraController?.stopImageStream());
           
-          final base64Image = await CameraProcessor.processEyeRegionBase64(
-             cameraImage: image,
-             face: face,
-             sensorOrientation: sensorOrientation,
-             lensDirection: _cameraController!.description.lensDirection,
+          final eyeCropBase64 = await CameraProcessor.processEyeRegionBase64(
+            cameraImage: image,
+            face: targetFace,
+            sensorOrientation: _cameraController!.description.sensorOrientation,
+            lensDirection: _cameraController!.description.lensDirection,
           );
 
-          if (base64Image != null && mounted) {
-             await provider.processAIResult(
-                imageBase64: base64Image,
-                deviceInfo: deviceInfo,
-             );
+          if (eyeCropBase64 != null && mounted) {
+            final screenPpi = MediaQuery.of(context).devicePixelRatio * 160;
+            await provider.processAIResult(
+               imageBase64: eyeCropBase64,
+               deviceInfo: Platform.operatingSystem,
+               screenPpi: screenPpi,
+            );
+            
+            if (mounted) {
+              unawaited(Provider.of<AuthProvider>(context, listen: false).reloadUser());
+            }
           }
         }
       }
     } catch (e) {
-      debugPrint("Error detecting face: $e");
+      debugPrint('Error in camera processing loop: $e');
     } finally {
       if (mounted) _isDetecting = false;
     }
   }
 
-  InputImageRotation _getRotation(int sensorOrientation) {
-    return InputImageRotationValue.fromRawValue(sensorOrientation) ?? InputImageRotation.rotation0deg;
-  }
 
   void _showDisclaimer() {
     showDialog(
@@ -134,27 +152,38 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange),
             SizedBox(width: 8),
-            Text("Medical Disclaimer")
+            Text('Medical Disclaimer')
           ],
         ),
-        content: Text("camera_disclaimer".tr(context) + "\n\nAplikasi ini hanya untuk skrining awal dan bukan pengganti diagnosis medis profesional."),
+        content: Text("${"camera_disclaimer".tr(context)}\n\nAplikasi ini hanya untuk skrining awal dan bukan pengganti diagnosis medis profesional."),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
             },
-            child: const Text("Saya Mengerti"),
+            child: const Text('Saya Mengerti'),
           )
         ],
       ),
     );
   }
 
+  IconData _getConditionIcon(String result) {
+    final r = result.toLowerCase();
+    if (r.contains('normal')) return Icons.check_circle_outline;
+    if (r.contains('mild')) return Icons.visibility_outlined;
+    if (r.contains('myopia') || r.contains('miopi')) return Icons.remove_red_eye;
+    if (r.contains('severe')) return Icons.warning_rounded;
+    if (r.contains('hiper')) return Icons.visibility;
+    if (r.contains('astig')) return Icons.blur_on;
+    return Icons.psychology;
+  }
+
   @override
   void dispose() {
     _cameraController?.dispose();
-    _faceDetector.close();
+    _faceDetector?.close();
     super.dispose();
   }
 
@@ -176,18 +205,18 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
         builder: (context, provider, child) {
           final distance = provider.currentDistanceCm;
           Color statusColor = Colors.grey;
-          String statusText = "camera_detecting".tr(context);
+          var statusText = 'camera_detecting'.tr(context);
 
           if (distance > 0) {
             if (distance < 30) {
               statusColor = Colors.red;
-              statusText = "camera_too_close".tr(context);
+              statusText = 'camera_too_close'.tr(context);
             } else if (distance >= 30 && distance <= 55) {
               statusColor = Colors.green;
-              statusText = "camera_ideal".tr(context);
+              statusText = 'camera_ideal'.tr(context);
             } else if (distance > 55) {
               statusColor = Colors.orange;
-              statusText = "camera_too_far".tr(context);
+              statusText = 'camera_too_far'.tr(context);
             }
           }
 
@@ -197,22 +226,76 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 color: statusColor,
-                child: Text(
-                  statusText,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (provider.isDetectingRemote && !provider.isCalibrated) ...[
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      statusText,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    if (distance > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${distance.toStringAsFixed(1)} cm',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              SizedBox(
-                height: 150,
-                width: 120,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    bottomRight: Radius.circular(20),
-                    bottomLeft: Radius.circular(20),
+              // Camera Preview dengan Countdown Overlay
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    height: 150,
+                    width: 120,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        bottomRight: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
+                      ),
+                      child: CameraPreview(_cameraController!),
+                    ),
                   ),
-                  child: CameraPreview(_cameraController!),
-                ),
+                  if (provider.countdown > 0)
+                    Container(
+                      height: 150,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: const BorderRadius.only(
+                          bottomRight: Radius.circular(20),
+                          bottomLeft: Radius.circular(20),
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${provider.countdown}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 40,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -235,27 +318,31 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
             const Icon(Icons.center_focus_strong, size: 80, color: Colors.blue),
             const SizedBox(height: 24),
             Text(
-              "calibration_title".tr(context),
+              'calibration_title'.tr(context),
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Text(
-              "calibration_desc".tr(context),
+              'calibration_desc'.tr(context),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, color: Colors.black87),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
-              onPressed: () {
-                provider.finishCalibration();
-              },
+              onPressed: (provider.currentDistanceCm >= 35 && provider.currentDistanceCm <= 45 && provider.countdown == 0)
+                ? () {
+                    provider.startCountdown(() {
+                      provider.finishCalibration();
+                    });
+                  }
+                : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               ),
-              child: Text("calibration_btn".tr(context)),
+              child: Text(provider.countdown > 0 ? '...' : 'calibration_btn'.tr(context)),
             )
           ],
         ),
@@ -271,17 +358,17 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
           ),
-          child: Text("start_test_btn".tr(context)),
+          child: Text('start_test_btn'.tr(context)),
         ),
       );
     } else if (provider.testStatus == TestStatus.testing) {
       final row = provider.currentRow;
       
-      double distanceMm = provider.currentDistanceCm > 0 ? provider.currentDistanceCm * 10.0 : 400.0;
-      double heightMm = distanceMm * 0.0014544 * (row.distanceRef / 20.0);
+      final distanceMm = provider.currentDistanceCm > 0 ? provider.currentDistanceCm * 10.0 : 400.0;
+      final heightMm = distanceMm * 0.0014544 * (row.distanceRef / 20.0);
       
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-      double logicalPx = (heightMm / 25.4) * (160 * pixelRatio) / pixelRatio; 
+      final logicalPx = (heightMm / 25.4) * (160 * pixelRatio) / pixelRatio; 
 
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -309,14 +396,14 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
-                Text("test_question".tr(context)),
+                Text('test_question'.tr(context)),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildInputBtn(provider, 0, "test_all_correct".tr(context), Colors.green),
-                    _buildInputBtn(provider, 1, "test_1_wrong".tr(context), Colors.orange),
-                    _buildInputBtn(provider, 2, "test_2_wrong".tr(context), Colors.red),
+                    _buildInputBtn(provider, 0, 'test_all_correct'.tr(context), Colors.green),
+                    _buildInputBtn(provider, 1, 'test_1_wrong'.tr(context), Colors.orange),
+                    _buildInputBtn(provider, 2, 'test_2_wrong'.tr(context), Colors.red),
                   ],
                 ),
               ],
@@ -325,14 +412,15 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
         ],
       );
     } else {
-      if (provider.isProcessingAI) {
-        return const Center(
+      // testStatus == TestStatus.finished
+      if (provider.isProcessingAI || provider.aiResultCategory == null) {
+        return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text("Menganalisis hasil refraksi menggunakan AI..."),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('ai_analyzing'.tr(context)),
             ],
           ),
         );
@@ -340,72 +428,138 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
 
       return Center(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.psychology, size: 80, color: Colors.deepPurple),
-                const SizedBox(height: 24),
-                Text(
-                  "AI Refraction Result",
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.deepPurple.shade200),
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _getConditionIcon(provider.aiResultCategory ?? ''),
+                size: 80,
+                color: (provider.aiActionRequired) ? Colors.red : Colors.deepPurple,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (provider.aiActionRequired)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 8.0),
+                      child: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                    ),
+                  const Text(
+                    'AI Refraction Result',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-                  child: Column(
-                    children: [
-                      Text(
-                        "${provider.aiResultCategory}",
-                        style: TextStyle(
-                           fontSize: 28, 
-                           fontWeight: FontWeight.bold,
-                           color: provider.aiResultCategory!.toLowerCase().contains('error') 
-                               ? Colors.red 
-                               : Colors.deepPurple,
-                        ),
-                        textAlign: TextAlign.center,
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: provider.aiActionRequired ? Colors.red.shade300 : Colors.deepPurple.shade200,
+                    width: provider.aiActionRequired ? 2 : 1,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      provider.aiResultCategory ?? 'Unknown',
+                      style: TextStyle(
+                         fontSize: 28, 
+                         fontWeight: FontWeight.bold,
+                         color: (provider.aiActionRequired || (provider.aiResultCategory?.toLowerCase().contains('error') ?? false))
+                             ? Colors.red 
+                             : Colors.deepPurple,
                       ),
-                      if (provider.aiConfidence != null) ...[
-                        const SizedBox(height: 8),
-                         Text(
-                          "Confidence: ${provider.aiConfidence!.toStringAsFixed(1)}%",
-                          style: const TextStyle(fontSize: 16, color: Colors.black54),
-                         )
-                      ]
+                      textAlign: TextAlign.center,
+                    ),
+                    if (provider.aiVisualAcuity != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Visual Acuity: ${provider.aiVisualAcuity}',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                      ),
                     ],
-                  ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildResultStat('Snellen Score', '20/${provider.smallestRowRead}'),
+                        if (provider.aiSnellenDecimal != null)
+                          _buildResultStat('Decimal', provider.aiSnellenDecimal!.toStringAsFixed(2)),
+                        _buildResultStat('Avg Distance', '${provider.currentDistanceCm.toStringAsFixed(1)} cm'),
+                      ],
+                    ),
+                    if (provider.aiConfidence != null) ...[
+                      const SizedBox(height: 4),
+                       Text(
+                        'Confidence: ${provider.aiConfidence!.toStringAsFixed(1)}%',
+                        style: const TextStyle(fontSize: 14, color: Colors.black54),
+                       )
+                    ],
+                    if (provider.aiRecommendation != null && provider.aiRecommendation!.isNotEmpty) ...[
+                      const Divider(height: 32),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: provider.aiActionRequired ? Colors.red.withValues(alpha: 0.05) : Colors.blue.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          provider.aiRecommendation!,
+                          style: TextStyle(
+                            fontSize: 15, 
+                            color: provider.aiActionRequired ? Colors.red.shade800 : Colors.black87, 
+                            fontStyle: FontStyle.italic,
+                            fontWeight: provider.aiActionRequired ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ]
+                  ],
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  "Snellen Score: 20/${provider.smallestRowRead}", 
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500)
-                ),
-                Text(
-                  "Avg Distance: ${provider.currentDistanceCm.toStringAsFixed(1)} cm", 
-                  style: const TextStyle(fontSize: 16, color: Colors.grey)
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton(
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildResultStat('Snellen Score', '20/${provider.smallestRowRead}'),
+                  if (provider.aiSnellenDecimal != null)
+                    _buildResultStat('Decimal', provider.aiSnellenDecimal!.toStringAsFixed(2)),
+                  _buildResultStat('Avg Distance', '${provider.currentDistanceCm.toStringAsFixed(1)} cm'),
+                ],
+              ),
+              const SizedBox(height: 32),
+              if (provider.aiCanConsultChatbot) ...[
+                ElevatedButton.icon(
                   onPressed: () {
+                    // Reset test state before navigating away
                     provider.resetTest();
-                    Navigator.pop(context);
+                    Navigator.pushReplacementNamed(context, '/chat');
                   },
+                  icon: const Icon(Icons.forum_rounded),
+                  label: const Text('Tanya Chatbot MataCeria'),
                   style: ElevatedButton.styleFrom(
-                     backgroundColor: Colors.deepPurple,
-                     foregroundColor: Colors.white,
-                     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    backgroundColor: Colors.blue.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text("test_back".tr(context)),
-                )
+                ),
+                const SizedBox(height: 12),
               ],
-            ),
+              TextButton(
+                onPressed: () {
+                  provider.resetTest();
+                  Navigator.pop(context);
+                },
+                child: Text('test_back'.tr(context)),
+              )
+            ],
           ),
         ),
       );
@@ -417,12 +571,30 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
     return ElevatedButton(
       onPressed: !provider.isCalibrated ? null : () {
         provider.submitRowResult(errors);
+        // Refresh profile stats if test finished
+        if (provider.testStatus == TestStatus.finished && mounted) {
+           Provider.of<AuthProvider>(context, listen: false).reloadUser();
+        }
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: isIdeal ? color : color.withOpacity(0.5),
+        backgroundColor: isIdeal ? color : color.withValues(alpha: 0.5),
         foregroundColor: Colors.white,
       ),
       child: Text(label),
+    );
+  }
+  Widget _buildResultStat(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+      ],
     );
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({Key? key}) : super(key: key);
+  const RegisterPage({super.key});
 
   @override
   _RegisterPageState createState() => _RegisterPageState();
@@ -33,7 +33,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (_selectedKelamin == null || _selectedPendidikan == null || _selectedPekerjaan == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Harap lengkapi semua pilihan dropdown"),
+          content: Text('Harap lengkapi semua pilihan dropdown'),
           backgroundColor: Colors.red,
         ),
       );
@@ -44,8 +44,8 @@ class _RegisterPageState extends State<RegisterPage> {
       _isLoading = true;
     });
 
-    final ApiService _apiService = ApiService();
-    final result = await _apiService.register(
+    final apiService = ApiService();
+    final result = await apiService.register(
       name: _namaController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
@@ -64,15 +64,15 @@ class _RegisterPageState extends State<RegisterPage> {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text("Berhasil"),
-            content: const Text("Akun berhasil didaftarkan. Silakan login."),
+            title: const Text('Berhasil'),
+            content: const Text('Akun berhasil didaftarkan. Silakan login.'),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); // Tutup dialog
                   Navigator.pop(context); // Kembali ke login
                 },
-                child: const Text("OK", style: TextStyle(color: Color(0xFF0D47A1))),
+                child: const Text('OK', style: TextStyle(color: Color(0xFF0D47A1))),
               )
             ],
           ),
@@ -118,7 +118,7 @@ class _RegisterPageState extends State<RegisterPage> {
         maxLength: maxLength,
         decoration: InputDecoration(
           labelText: labelText,
-          counterText: "",
+          counterText: '',
           prefixIcon: Icon(icon, color: const Color(0xFF0D47A1)),
           suffixIcon: suffixIcon,
           border: OutlineInputBorder(
@@ -148,7 +148,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon, color: const Color(0xFF0D47A1)),
@@ -164,7 +164,7 @@ class _RegisterPageState extends State<RegisterPage> {
             borderSide: const BorderSide(color: Color(0xFF0D47A1), width: 2),
           ),
         ),
-        items: items.map((String item) {
+        items: items.map((item) {
           return DropdownMenuItem<String>(
             value: item,
             child: Text(item),
@@ -181,7 +181,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Daftar Akun"),
+        title: const Text('Daftar Akun'),
         backgroundColor: const Color(0xFF0D47A1),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -195,7 +195,7 @@ class _RegisterPageState extends State<RegisterPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  "Lengkapi Data Diri",
+                  'Lengkapi Data Diri',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -204,7 +204,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  "Buat akun untuk menggunakan layanan kami",
+                  'Buat akun untuk menggunakan layanan kami',
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 const SizedBox(height: 24),
@@ -265,7 +265,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 
                 _buildDropdownField(
-                  label: "Kelamin",
+                  label: 'Kelamin',
                   value: _selectedKelamin,
                   items: _kelaminOptions,
                   icon: Icons.wc,
@@ -273,7 +273,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 
                 _buildDropdownField(
-                  label: "Jenjang Pendidikan",
+                  label: 'Jenjang Pendidikan',
                   value: _selectedPendidikan,
                   items: _pendidikanOptions,
                   icon: Icons.school,
@@ -281,7 +281,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 
                 _buildDropdownField(
-                  label: "Status Pekerjaan",
+                  label: 'Status Pekerjaan',
                   value: _selectedPekerjaan,
                   items: _pekerjaanOptions,
                   icon: Icons.work,

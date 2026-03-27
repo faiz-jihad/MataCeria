@@ -4,7 +4,7 @@ import 'home_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -28,8 +28,8 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    final ApiService _apiService = ApiService();
-    final result = await _apiService.login(email: email, password: password);
+    final apiService = ApiService();
+    final result = await apiService.login(email: email, password: password);
 
     setState(() {
       _isLoading = false;
@@ -80,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    "Selamat Datang",
+                    'Selamat Datang',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 28,
@@ -90,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    "Masuk ke Aplikasi Refraksi Mata",
+                    'Masuk ke Aplikasi Refraksi Mata',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
@@ -191,7 +191,7 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Belum punya akun? "),
+                      const Text('Belum punya akun? '),
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -200,7 +200,7 @@ class _LoginPageState extends State<LoginPage> {
                           );
                         },
                         child: const Text(
-                          "Daftar",
+                          'Daftar',
                           style: TextStyle(
                             color: Color(0xFF0D47A1),
                             fontWeight: FontWeight.bold,

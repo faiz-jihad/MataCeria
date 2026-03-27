@@ -1,8 +1,6 @@
 // lib/models/analytics_model.dart
 
 class FrequentQuery {
-  final String message;
-  final int count;
 
   FrequentQuery({required this.message, required this.count});
 
@@ -12,14 +10,11 @@ class FrequentQuery {
       count: json['count'] ?? 0,
     );
   }
+  final String message;
+  final int count;
 }
 
 class QueryCategories {
-  final int recommendation;
-  final int medicine;
-  final int food;
-  final int emergency;
-  final int general;
 
   QueryCategories({
     required this.recommendation,
@@ -38,16 +33,16 @@ class QueryCategories {
       general: json['general'] ?? 0,
     );
   }
+  final int recommendation;
+  final int medicine;
+  final int food;
+  final int emergency;
+  final int general;
 
   int get total => recommendation + medicine + food + emergency + general;
 }
 
 class UserAnalytics {
-  final int totalQueries;
-  final int totalSessions;
-  final int helpfulCount;
-  final double feedbackRate;
-  final List<FrequentQuery> topQueries;
 
   UserAnalytics({
     required this.totalQueries,
@@ -68,4 +63,9 @@ class UserAnalytics {
           .toList(),
     );
   }
+  final int totalQueries;
+  final int totalSessions;
+  final int helpfulCount;
+  final double feedbackRate;
+  final List<FrequentQuery> topQueries;
 }

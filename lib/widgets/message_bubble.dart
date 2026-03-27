@@ -6,9 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/chat_message.dart';
 
 class MessageBubble extends StatefulWidget {
-  final ChatMessage message;
-  final Function(bool isHelpful, String? note) onFeedback;
-  final Function(String suggestion)? onSuggestionTap;
 
   const MessageBubble({
     super.key,
@@ -16,6 +13,9 @@ class MessageBubble extends StatefulWidget {
     required this.onFeedback,
     this.onSuggestionTap,
   });
+  final ChatMessage message;
+  final Function(bool isHelpful, String? note) onFeedback;
+  final Function(String suggestion)? onSuggestionTap;
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -117,7 +117,7 @@ class _MessageBubbleState extends State<MessageBubble> {
               widget.message.suggestions != null && 
               widget.message.suggestions!.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(
+              padding: const EdgeInsets.only(
                 left: 40,
                 top: 8,
                 bottom: 4,

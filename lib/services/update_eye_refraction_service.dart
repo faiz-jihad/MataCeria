@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
@@ -14,7 +15,7 @@ class EyeRefractionService {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl${ApiConfig.mlHealth}'),
-      ).timeout(Duration(seconds: ApiConfig.connectionTimeout));
+      ).timeout(const Duration(seconds: ApiConfig.connectionTimeout));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -22,7 +23,7 @@ class EyeRefractionService {
       }
       return false;
     } catch (e) {
-      print('Health check error: $e');
+      debugPrint('Health check error: $e');
       return false;
     }
   }
@@ -42,7 +43,7 @@ class EyeRefractionService {
       }
       return [];
     } catch (e) {
-      print('Get conditions error: $e');
+      debugPrint('Get conditions error: $e');
       return [];
     }
   }
@@ -50,9 +51,9 @@ class EyeRefractionService {
   // Prediksi gambar
   Future<Map<String, dynamic>> predictImage(File imageFile) async {
     try {
-      print('📤 Mengirim gambar ke ML service: $baseUrl${ApiConfig.mlPredict}');
+      debugPrint('📤 Mengirim gambar ke ML service: $baseUrl${ApiConfig.mlPredict}');
       
-      var request = http.MultipartRequest(
+      final request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl${ApiConfig.mlPredict}'),
       );
@@ -61,11 +62,11 @@ class EyeRefractionService {
         await http.MultipartFile.fromPath('image', imageFile.path),
       );
       
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
       
-      print('📥 Status: ${response.statusCode}');
-      print('📥 Response: ${response.body}');
+      debugPrint('📥 Status: ${response.statusCode}');
+      debugPrint('📥 Response: ${response.body}');
       
       if (response.statusCode == 200) {
         return json.decode(response.body);
@@ -73,7 +74,7 @@ class EyeRefractionService {
         throw Exception('Server error: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Error: $e');
+      debugPrint('❌ Error: $e');
       throw Exception('Gagal memprediksi: $e');
     }
   }

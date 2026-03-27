@@ -3,11 +3,6 @@
 import 'package:flutter/material.dart';
 
 class MedicalCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final VoidCallback? onTap;
 
   const MedicalCard({
     super.key,
@@ -17,6 +12,11 @@ class MedicalCard extends StatelessWidget {
     required this.color,
     this.onTap,
   });
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -65,10 +65,6 @@ class MedicalCard extends StatelessWidget {
 }
 
 class MedicalInfoCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final List<Widget> children;
 
   const MedicalInfoCard({
     super.key,
@@ -77,6 +73,10 @@ class MedicalInfoCard extends StatelessWidget {
     required this.color,
     required this.children,
   });
+  final String title;
+  final IconData icon;
+  final Color color;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
@@ -125,11 +125,6 @@ class MedicalInfoCard extends StatelessWidget {
 }
 
 class MedicalInfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool isEditable;
-  final TextEditingController? controller;
-  final String? hint;
 
   const MedicalInfoRow({
     super.key,
@@ -139,6 +134,11 @@ class MedicalInfoRow extends StatelessWidget {
     this.controller,
     this.hint,
   });
+  final String label;
+  final String value;
+  final bool isEditable;
+  final TextEditingController? controller;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {

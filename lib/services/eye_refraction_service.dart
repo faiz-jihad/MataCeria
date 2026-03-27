@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
@@ -11,7 +12,7 @@ class EyeRefractionService {
   
   Future<Map<String, dynamic>> predictEyeRefraction(File imageFile) async {
     try {
-      var request = http.MultipartRequest(
+      final request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl${ApiConfig.uploadTest}'),
       );
@@ -20,8 +21,8 @@ class EyeRefractionService {
         await http.MultipartFile.fromPath('image', imageFile.path),
       );
       
-      var response = await request.send();
-      var responseData = await http.Response.fromStream(response);
+      final response = await request.send();
+      final responseData = await http.Response.fromStream(response);
       
       if (response.statusCode == 200) {
         return json.decode(responseData.body);
@@ -35,17 +36,17 @@ class EyeRefractionService {
   
   Future<List<String>> getConditions({int page = 1}) async {
     try {
-      var response = await http.get(
+      final response = await http.get(
         Uri.parse('$baseUrl/conditions?page=$page&per_page=50'),
       );
       
       if (response.statusCode == 200) {
-        var data = json.decode(response.body);
+        final data = json.decode(response.body);
         return List<String>.from(data['conditions']);
       }
       return [];
     } catch (e) {
-      print('Error: $e');
+      debugPrint('Error: $e');
       return [];
     }
   }

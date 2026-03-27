@@ -1,8 +1,10 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ApiConfig {
   // ========== CONFIGURATION ==========
   static String get baseUrl {
-    // UPDATED: Using the Cloudflare URL for public access
-    return 'https://mill-too-auditor-prefer.trycloudflare.com';
+    return dotenv.env['API_BASE_URL'] ??
+        'https://using-students-categories-discovery.trycloudflare.com';
   }
 
   static String get mlBaseUrl => baseUrl;
@@ -30,6 +32,7 @@ class ApiConfig {
   static const String cameraRefractionTest =
       '/refraction/test'; // Compatibility
   static const String aiRefractionV2 = '/refraction/ai'; // AI Hybrid V2
+  static const String detectDistance = '/refraction/detect-distance'; // V2
 
   // ========== 4. ARTIKEL & RISET (/articles) ==========
   static const String articles = '/articles';
@@ -53,6 +56,7 @@ class ApiConfig {
 
   // ========== 8. AI CHATBOT (/chat) ==========
   static const String chat = '/chat';
+  static const String chatV2 = '/chat/v2';
   static const String chatHistory = '/chat/history';
   static const String chatSessions = '/chat/sessions';
   static const String chatFeedback = '/chat/feedback';

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../providers/eye_refraction_provider.dart';
 import '../../utils/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../../l10n/app_strings.dart';
 
 
 class CameraScreen extends StatefulWidget {
@@ -35,7 +36,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     // Request izin kamera
-    bool hasPermission = await PermissionHandler.requestCameraPermission();
+    final hasPermission = await PermissionHandler.requestCameraPermission();
     if (!hasPermission) {
       _showErrorSnackBar('Izin kamera diperlukan');
       return;
@@ -108,7 +109,7 @@ class _CameraScreenState extends State<CameraScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Deteksi Refraksi'),
+        title: Text('eye_detect_title'.tr(context)),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -144,7 +145,7 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
           const SizedBox(width: 4),
           Text(
-            provider.serviceHealthy ? 'ML Ready' : 'ML Offline',
+            provider.serviceHealthy ? 'ml_ready'.tr(context) : 'ml_offline'.tr(context),
             style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
@@ -153,20 +154,20 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 20),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 20),
           Text(
-            'Menganalisis gambar...',
-            style: TextStyle(fontSize: 16),
+            'analysing_image'.tr(context),
+            style: const TextStyle(fontSize: 16),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Mohon tunggu sebentar',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            'wait_moment'.tr(context),
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ],
       ),
@@ -198,9 +199,9 @@ class _CameraScreenState extends State<CameraScreen> {
           const SizedBox(height: 30),
           
           // Title
-          const Text(
-            'Deteksi Refraksi Mata',
-            style: TextStyle(
+          Text(
+            'eye_detect_title'.tr(context),
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
@@ -209,10 +210,10 @@ class _CameraScreenState extends State<CameraScreen> {
           const SizedBox(height: 10),
           
           // Subtitle
-          const Text(
-            'Ambil foto atau pilih dari galeri untuk mendeteksi kondisi refraksi mata',
+          Text(
+            'pick_image_desc'.tr(context),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: Colors.grey,
             ),
@@ -238,7 +239,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ML Service Offline',
+                          'ml_service_offline'.tr(context),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.red.shade700,
@@ -246,7 +247,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Jalankan python app.py di terminal',
+                          'ml_run_instruction'.tr(context),
                           style: TextStyle(
                             color: Colors.red.shade700,
                             fontSize: 12,
@@ -267,7 +268,7 @@ class _CameraScreenState extends State<CameraScreen> {
               Expanded(
                 child: _buildImageSourceButton(
                   icon: Icons.camera_alt,
-                  label: 'Kamera',
+                  label: 'camera'.tr(context),
                   color: Colors.blue,
                   onPressed: provider.serviceHealthy 
                       ? () => _pickImage(ImageSource.camera)
@@ -278,7 +279,7 @@ class _CameraScreenState extends State<CameraScreen> {
               Expanded(
                 child: _buildImageSourceButton(
                   icon: Icons.photo_library,
-                  label: 'Galeri',
+                  label: 'gallery'.tr(context),
                   color: Colors.green,
                   onPressed: provider.serviceHealthy 
                       ? () => _pickImage(ImageSource.gallery)
@@ -294,7 +295,7 @@ class _CameraScreenState extends State<CameraScreen> {
           TextButton.icon(
             onPressed: _checkServiceHealth,
             icon: const Icon(Icons.refresh),
-            label: const Text('Cek Ulang Service'),
+            label: Text('recheck_service'.tr(context)),
           ),
         ],
       ),
@@ -379,9 +380,9 @@ class _CameraScreenState extends State<CameraScreen> {
                         color: Colors.blue,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
-                        'Siap Dianalisis',
-                        style: TextStyle(
+                      child: Text(
+                        'ready_to_analyze'.tr(context),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
                         ),
@@ -422,7 +423,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         });
                       },
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Ulangi'),
+                      label: Text('retry'.tr(context)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.grey,
                         side: const BorderSide(color: Colors.grey),
@@ -438,7 +439,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _analyzeImage,
                       icon: const Icon(Icons.analytics),
-                      label: const Text('Analisis'),
+                      label: Text('analyze'.tr(context)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
@@ -454,9 +455,9 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
               const SizedBox(height: 12),
               // Info kecil
-              const Text(
-                'Pastikan gambar wajah jelas dan pencahayaan cukup',
-                style: TextStyle(
+              Text(
+                'lighting_hint'.tr(context),
+                style: const TextStyle(
                   fontSize: 11,
                   color: Colors.grey,
                 ),

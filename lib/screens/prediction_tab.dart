@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../models/prediction_model.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/empty_state.dart';
+import '../l10n/app_strings.dart';
 
 class PredictionTab extends StatefulWidget {
   const PredictionTab({super.key});
@@ -43,14 +44,14 @@ class _PredictionTabState extends State<PredictionTab>
     _refreshController.repeat();
 
     try {
-      final List<dynamic> response = await _apiService.getPredictions();
+      final response = await _apiService.getPredictions();
       setState(() {
         _predictions = response.map((p) => Prediction.fromJson(p)).toList();
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      _showErrorSnackBar('Gagal memuat riwayat deteksi');
+      _showErrorSnackBar('report_error'.tr(context));
     }
 
     _refreshController.stop();
@@ -76,9 +77,10 @@ class _PredictionTabState extends State<PredictionTab>
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          'Report',
-          style: TextStyle(
+        automaticallyImplyLeading: false,
+        title: Text(
+          'report_title'.tr(context),
+          style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
             fontSize: 22,
@@ -119,8 +121,8 @@ class _PredictionTabState extends State<PredictionTab>
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildStatCard(
-                      'AI Status',
-                      mlProvider.serviceHealthy ? 'Active' : 'Offline',
+                      'ai_status'.tr(context),
+                      mlProvider.serviceHealthy ? 'active'.tr(context) : 'offline'.tr(context),
                       Icons.memory,
                       const Color(0xFFF0FDF4),
                       const Color(0xFF15803D),
@@ -129,9 +131,9 @@ class _PredictionTabState extends State<PredictionTab>
                 ],
               ),
               const SizedBox(height: 30),
-              const Text(
-                'Latest Report',
-                style: TextStyle(
+              Text(
+                'latest_report'.tr(context),
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -179,16 +181,34 @@ class _PredictionTabState extends State<PredictionTab>
       child: Stack(
         children: [
           Positioned(
-            right: 0,
-            bottom: 0,
-            child: Opacity(
-              opacity: 0.1,
-              child: Icon(
-                _getConditionIcon(latest.resultClass),
-                size: 150,
-                color: const Color(0xFF2563EB),
-              ),
-            ),
+            right: -20,
+            bottom: -20,
+            child: latest.fullImageUrl.isNotEmpty
+                ? Opacity(
+                    opacity: 0.15,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: Image.network(
+                        latest.fullImageUrl,
+                        width: 200,
+                        height: 200,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          _getConditionIcon(latest.resultClass),
+                          size: 150,
+                          color: const Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  )
+                : Opacity(
+                    opacity: 0.1,
+                    child: Icon(
+                      _getConditionIcon(latest.resultClass),
+                      size: 150,
+                      color: const Color(0xFF2563EB),
+                    ),
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(24),
@@ -237,6 +257,24 @@ class _PredictionTabState extends State<PredictionTab>
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    if (latest.visualAcuity != null) ...[
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade700,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          latest.visualAcuity!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -324,16 +362,28 @@ class _PredictionTabState extends State<PredictionTab>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
               color: prediction.color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: Icon(
-              _getConditionIcon(prediction.resultClass),
-              color: prediction.color,
-              size: 24,
-            ),
+            clipBehavior: Clip.antiAlias,
+            child: prediction.fullImageUrl.isNotEmpty
+                ? Image.network(
+                    prediction.fullImageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      _getConditionIcon(prediction.resultClass),
+                      color: prediction.color,
+                      size: 24,
+                    ),
+                  )
+                : Icon(
+                    _getConditionIcon(prediction.resultClass),
+                    color: prediction.color,
+                    size: 24,
+                  ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -347,13 +397,41 @@ class _PredictionTabState extends State<PredictionTab>
                     fontSize: 16,
                   ),
                 ),
-                Text(
-                  'Confidence: ${prediction.confidencePercent}',
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
+                Row(
+                   children: [
+                     Text(
+                        '${'confidence'.tr(context)}: ${prediction.confidencePercent}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (prediction.visualAcuity != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '•  ${prediction.visualAcuity}',
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                   ],
                 ),
+                if (prediction.recommendation != null && prediction.recommendation!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    prediction.recommendation!,
+                    style: TextStyle(
+                      color: prediction.actionRequired ? Colors.red.shade700 : Colors.grey.shade600,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
@@ -378,22 +456,23 @@ class _PredictionTabState extends State<PredictionTab>
 
   Widget _buildEmptyState() {
     return EmptyState(
-      title: 'Belum Ada Laporan',
-      message: 'Anda belum melakukan deteksi kesehatan mata. Mulai sekarang untuk melihat riwayat Anda.',
+      title: 'report_empty'.tr(context),
+      message: 'no_reports_msg'.tr(context),
       icon: Icons.assignment_outlined,
-      actionLabel: 'Mulai Deteksi',
+      actionLabel: 'start_detection'.tr(context),
       onAction: () => Navigator.pushNamed(context, '/refraction_test'),
     );
   }
 
-  IconData _getConditionIcon(String resultClass) {
-    switch (resultClass) {
-      case 'Normal': return Icons.check_circle;
-      case 'Miopi': return Icons.remove_red_eye;
-      case 'Hipermetropi': return Icons.visibility_off;
-      case 'Astigmatisme': return Icons.blur_on;
-      default: return Icons.info;
-    }
+  IconData _getConditionIcon(String condition) {
+    final c = condition.toLowerCase();
+    if (c.contains('normal')) return Icons.check_circle;
+    if (c.contains('mild')) return Icons.visibility_outlined;
+    if (c.contains('myopia') || c.contains('miopi')) return Icons.remove_red_eye;
+    if (c.contains('severe')) return Icons.warning_rounded;
+    if (c.contains('hiper')) return Icons.visibility;
+    if (c.contains('astig')) return Icons.blur_on;
+    return Icons.help_outline;
   }
 
   String _formatDate(DateTime date) {
@@ -401,10 +480,10 @@ class _PredictionTabState extends State<PredictionTab>
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      if (difference.inHours == 0) return '${difference.inMinutes}m ago';
-      return '${difference.inHours}h ago';
+      if (difference.inHours == 0) return '${difference.inMinutes}m ${'ago'.tr(context)}';
+      return '${difference.inHours}h ${'ago'.tr(context)}';
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return 'yesterday'.tr(context);
     } else {
       return '${date.day}/${date.month}';
     }
@@ -412,8 +491,8 @@ class _PredictionTabState extends State<PredictionTab>
 }
 
 class WavePainter extends CustomPainter {
-  final Color color;
   WavePainter({required this.color});
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {

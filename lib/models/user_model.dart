@@ -1,21 +1,4 @@
 class User {
-  final int id;
-  final String name;
-  final String email;
-  final String? phone;
-  final int? age;
-  final String? gender;
-  final String? education;
-  final String? occupation;
-  final String? visionType;
-  final List<String>? visionConcerns;
-  final String? allergies;
-  final String? medicalHistory;
-  final int? totalDetections;
-  final int? totalConsultations;
-  final DateTime? createdAt;
-  final String? token;
-  final String? role;
 
   User({
     required this.id,
@@ -62,6 +45,23 @@ class User {
       role: json['role'] ?? 'user',
     );
   }
+  final int id;
+  final String name;
+  final String email;
+  final String? phone;
+  final int? age;
+  final String? gender;
+  final String? education;
+  final String? occupation;
+  final String? visionType;
+  final List<String>? visionConcerns;
+  final String? allergies;
+  final String? medicalHistory;
+  final int? totalDetections;
+  final int? totalConsultations;
+  final DateTime? createdAt;
+  final String? token;
+  final String? role;
 
   Map<String, dynamic> toJson() {
     return {

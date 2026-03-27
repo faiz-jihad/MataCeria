@@ -161,7 +161,7 @@ class ChatProvider extends ChangeNotifier {
 
       return success;
     } catch (e) {
-      print('Error sending feedback: $e');
+      debugPrint('Error sending feedback: $e');
       return false;
     }
   }

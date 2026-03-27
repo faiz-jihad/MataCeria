@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -10,15 +11,15 @@ import '../config/api_config.dart';
 
 
 class ApiService {
-  static final String baseUrl = ApiConfig.fullBaseUrl;
+  static String get baseUrl => ApiConfig.fullBaseUrl;
 
   // Helper for headers
   Future<Map<String, String>> _getHeaders() async {
     final token = await getToken();
     return {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      if (token != null) "Authorization": "Bearer $token",
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
     };
   }
 
@@ -34,19 +35,19 @@ class ApiService {
   }) async {
     final url = Uri.parse('$baseUrl${ApiConfig.register}');
     final body = {
-      "nama_lengkap": name,
-      "email": email,
-      "password": password,
-      if (umur != null) "umur": umur,
-      if (kelamin != null) "kelamin": kelamin,
-      if (jenjangPendidikan != null) "jenjang_pendidikan": jenjangPendidikan,
-      if (statusPekerjaan != null) "status_pekerjaan": statusPekerjaan,
+      'nama_lengkap': name,
+      'email': email,
+      'password': password,
+      if (umur != null) 'umur': umur,
+      if (kelamin != null) 'kelamin': kelamin,
+      if (jenjangPendidikan != null) 'jenjang_pendidikan': jenjangPendidikan,
+      if (statusPekerjaan != null) 'status_pekerjaan': statusPekerjaan,
     };
 
     try {
       final response = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
 
@@ -82,12 +83,12 @@ class ApiService {
       final response = await http.post(
         url,
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Accept": "application/json",
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
         },
         body: {
-          "username": email,
-          "password": password,
+          'username': email,
+          'password': password,
         },
       );
 
@@ -117,7 +118,14 @@ class ApiService {
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
-        return User.fromJson(jsonDecode(response.body));
+        final data = jsonDecode(response.body);
+        final user = User.fromJson(data);
+        
+        // Persist user_id for other providers (e.g. RefractionTestProvider)
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_id', user.id.toString());
+        
+        return user;
       }
     } catch (e) {
       // Log error internally or handle appropriately
@@ -147,10 +155,10 @@ class ApiService {
     final url = Uri.parse('$baseUrl${ApiConfig.uploadTest}');
     try {
       final token = await getToken();
-      var request = http.MultipartRequest('POST', url);
+      final request = http.MultipartRequest('POST', url);
       
       request.headers.addAll({
-        if (token != null) "Authorization": "Bearer $token",
+        if (token != null) 'Authorization': 'Bearer $token',
       });
       
       request.files.add(
@@ -161,8 +169,8 @@ class ApiService {
         ),
       );
       
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -192,7 +200,7 @@ class ApiService {
 
   // Chat Sessions
   Future<List<ChatSession>> getChatSessions() async {
-    final url = Uri.parse('$baseUrl${ApiConfig.chatSessions}');
+    final url = Uri.parse('${ApiConfig.v2BaseUrl}${ApiConfig.chatSessions}');
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
@@ -207,7 +215,7 @@ class ApiService {
 
   // Chat History
   Future<List<ChatMessage>> getChatHistory(String sessionId, {int page = 1}) async {
-    final url = Uri.parse('$baseUrl/chat/sessions/$sessionId/messages?page=$page');
+    final url = Uri.parse('${ApiConfig.v2BaseUrl}/chat/sessions/$sessionId/messages?page=$page');
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
@@ -227,7 +235,7 @@ class ApiService {
     String? refractionResult,
     XFile? file,
   }) async {
-    final url = Uri.parse('$baseUrl/chat/send');
+    final url = Uri.parse('${ApiConfig.v2BaseUrl}${ApiConfig.chat}');
     
     try {
       final token = await getToken();
@@ -235,9 +243,9 @@ class ApiService {
       if (file == null) {
         // Standard JSON POST
         final body = {
-          "message": message,
-          if (sessionId != null) "session_id": sessionId,
-          if (refractionResult != null) "refraction_result": refractionResult,
+          'message': message,
+          if (sessionId != null) 'session_id': sessionId,
+          if (refractionResult != null) 'refraction_result': refractionResult,
         };
         final response = await http.post(
           url,
@@ -247,10 +255,10 @@ class ApiService {
         return _handleChatResponse(response, sessionId);
       } else {
         // Multipart for files
-        var request = http.MultipartRequest('POST', url);
+        final request = http.MultipartRequest('POST', url);
         request.headers.addAll({
-          if (token != null) "Authorization": "Bearer $token",
-          "Accept": "application/json",
+          if (token != null) 'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
         });
         
         request.fields['message'] = message;
@@ -265,8 +273,8 @@ class ApiService {
           ),
         );
         
-        var streamedResponse = await request.send();
-        var response = await http.Response.fromStream(streamedResponse);
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
         return _handleChatResponse(response, sessionId);
       }
     } catch (e) {
@@ -293,7 +301,7 @@ class ApiService {
     } else {
       return {
         'success': false,
-        'message': _extractErrorMessage(response.body, 'Gagal mengirim pesan')
+        'message': _handleStatusCodeError(response, 'Gagal mengirim pesan chat')
       };
     }
   }
@@ -306,8 +314,8 @@ class ApiService {
   }) async {
     final url = Uri.parse('$baseUrl${ApiConfig.chatFeedback}');
     final body = {
-      "is_helpful": isHelpful,
-      if (note != null) "note": note,
+      'is_helpful': isHelpful,
+      if (note != null) 'note': note,
     };
 
     try {
@@ -374,8 +382,12 @@ class ApiService {
   }
 
   // Emergency Contacts
-  Future<List<EmergencyContact>> getEmergencyContacts() async {
-    final url = Uri.parse('$baseUrl${ApiConfig.emergencyContacts}');
+  Future<List<EmergencyContact>> getEmergencyContacts({String? region}) async {
+    var urlStr = '$baseUrl${ApiConfig.emergencyContacts}';
+    if (region != null && region.isNotEmpty && region != 'Semua') {
+      urlStr += '?region=$region';
+    }
+    final url = Uri.parse(urlStr);
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
@@ -389,7 +401,7 @@ class ApiService {
     }
 
     // Default Fallback Data (Indonesian Eye Care Centers)
-    return [
+    final fallbacks = [
       EmergencyContact(
         id: 1,
         name: 'JEC (Jakarta Eye Center)',
@@ -423,6 +435,11 @@ class ApiService {
         type: 'hospital',
       ),
     ];
+
+    if (region != null && region.isNotEmpty && region != 'Semua') {
+      return fallbacks.where((c) => c.city == region).toList();
+    }
+    return fallbacks;
   }
 
   // Predictions History
@@ -434,7 +451,7 @@ class ApiService {
         return jsonDecode(response.body);
       }
     } catch (e) {
-      print('Error fetching predictions: $e');
+      debugPrint('Error fetching predictions: $e');
     }
     // Mock data fallback for production-ready feel
     return [
@@ -556,7 +573,7 @@ class ApiService {
         return jsonDecode(response.body);
       }
     } catch (e) {
-      print('Error fetching users for admin: $e');
+      debugPrint('Error fetching users for admin: $e');
     }
     return [];
   }
@@ -581,52 +598,20 @@ class ApiService {
       );
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      print('Error submitting refraction result: $e');
+      debugPrint('Error submitting refraction result: $e');
       return false;
     }
   }
   
-  // AI-Powered Eye Refraction Test (v2)
-  Future<Map<String, dynamic>> postAIRefractionAI({
-    required String imageBase64,
-    required Map<String, dynamic> snellenData,
-    required String deviceInfo,
-  }) async {
-    final url = Uri.parse('${ApiConfig.v2BaseUrl}${ApiConfig.aiRefractionV2}');
-    final body = {
-      "image": imageBase64,
-      "snellen_data": snellenData,
-      "device_info": deviceInfo,
-    };
-
-    try {
-      final response = await http.post(
-        url,
-        headers: await _getHeaders(),
-        body: jsonEncode(body),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return {'success': true, 'data': jsonDecode(response.body)};
-      } else {
-        return {
-          'success': false,
-          'message': _extractErrorMessage(response.body, 'Gagal memproses tes AI')
-        };
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Terjadi kesalahan jaringan: $e'};
-    }
-  }
 
   // Endpoint Lupa Password
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     final url = Uri.parse('$baseUrl${ApiConfig.forgotPassword}');
-    final body = {"email": email};
+    final body = {'email': email};
     try {
       final response = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
       if (response.statusCode == 200) {
@@ -649,8 +634,8 @@ class ApiService {
   }) async {
     final url = Uri.parse('$baseUrl${ApiConfig.changePassword}');
     final body = {
-      "old_password": oldPassword,
-      "new_password": newPassword,
+      'old_password': oldPassword,
+      'new_password': newPassword,
     };
     try {
       final response = await http.post(
@@ -703,7 +688,7 @@ class ApiService {
         return jsonDecode(response.body);
       }
     } catch (e) {
-      print('Error fetching activities: $e');
+      debugPrint('Error fetching activities: $e');
     }
     // Return mock data if API fails or is not implemented yet for "production ready" feel
     return [
@@ -745,7 +730,7 @@ class ApiService {
         return jsonDecode(response.body);
       }
     } catch (e) {
-      print('DEBUG: Error fetching articles from $url: $e');
+      debugPrint('DEBUG: Error fetching articles from $url: $e');
     }
     // Mock articles fallback for production-ready feel
     return [
@@ -798,8 +783,76 @@ class ApiService {
     }
   }
 
+  String _handleStatusCodeError(http.Response response, String defaultMsg) {
+    if (response.statusCode == 429) {
+      return 'Harap tunggu sebentar (Terlalu banyak permintaan)';
+    }
+    return _extractErrorMessage(response.body, defaultMsg);
+  }
+
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
+  }
+
+  // Real-time Face Distance Detection (v2)
+  Future<Map<String, dynamic>> detectFaceDistance(String imageBase64) async {
+    final url = Uri.parse('${ApiConfig.v2BaseUrl}${ApiConfig.detectDistance}');
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode({'image': imageBase64}),
+      ).timeout(const Duration(milliseconds: 1500)); 
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false};
+    } catch (_) {
+      return {'success': false};
+    }
+  }
+
+  // AI Refraction Analysis (Hybrid v2)
+  Future<Map<String, dynamic>> postAIRefractionAI({
+    required String imageBase64,
+    required Map<String, dynamic> snellenData,
+    required String? userId,
+    required double screenPpi,
+  }) async {
+    final url = Uri.parse('${ApiConfig.v2BaseUrl}${ApiConfig.aiRefractionV2}');
+    
+    final payload = {
+      'user_id': userId ?? 'anonymous',
+      'device_info': { 'screen_ppi': screenPpi },
+      'snellen_data': {
+        'avg_distance_cm': snellenData['avg_distance_cm'],
+        'smallest_row_read': snellenData['smallest_row_read'],
+        'missed_chars': snellenData['missed_chars'],
+        'response_time': snellenData['response_time'],
+      },
+      'image_data': {
+        'eye_frame_base64': imageBase64
+      }
+    };
+
+    try {
+      final response = await http.post(
+        url,
+        headers: await _getHeaders(),
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {
+        'success': false, 
+        'message': _handleStatusCodeError(response, 'Failed to process AI Refraction')
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
   }
 }

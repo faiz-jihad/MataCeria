@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EyeRestProvider with ChangeNotifier {
+
+  EyeRestProvider() {
+    _loadSettings();
+    _startTimer();
+  }
   Timer? _timer;
   int _secondsElapsed = 0;
   bool _isEnabled = true;
@@ -15,11 +20,6 @@ class EyeRestProvider with ChangeNotifier {
   int get reminderIntervalMinutes => _reminderIntervalMinutes;
   bool get shouldShowAlert => _shouldShowAlert;
   int get secondsRemaining => (_reminderIntervalMinutes * 60) - _secondsElapsed;
-
-  EyeRestProvider() {
-    _loadSettings();
-    _startTimer();
-  }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();

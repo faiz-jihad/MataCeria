@@ -3,11 +3,6 @@
 import 'package:flutter/material.dart';
 
 class QuickChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color color;
-  final bool isSelected;
 
   const QuickChip({
     super.key,
@@ -17,6 +12,11 @@ class QuickChip extends StatelessWidget {
     this.color = Colors.blue,
     this.isSelected = false,
   });
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color color;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {

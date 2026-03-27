@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../config/api_config.dart';
 
 class ArticleDetailScreen extends StatelessWidget {
-  final Map<String, dynamic> article;
 
   const ArticleDetailScreen({super.key, required this.article});
+  final Map<String, dynamic> article;
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +113,7 @@ class ArticleDetailScreen extends StatelessWidget {
         ),
         child: ElevatedButton.icon(
           onPressed: () {
-            final String shareText =
+            final shareText =
                 'Baca artikel kesehatan mata menarik dari MataCeria: '
                 '${article['title']}\n\n'
                 '${article['content']?.toString() ?? ""}';

@@ -5,6 +5,10 @@ import '../services/api_service.dart';
 import '../models/user_model.dart';
 
 class AuthProvider extends ChangeNotifier {
+
+  AuthProvider() {
+    _loadUser();
+  }
   User? _user;
   bool _isLoading = false;
   String? _errorMessage;
@@ -16,13 +20,13 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
 
-  AuthProvider() {
-    _loadUser();
+  Future<void> reloadUser() async {
+    _user = await _apiService.getCurrentUser();
+    notifyListeners();
   }
 
   Future<void> _loadUser() async {
-    _user = await _apiService.getCurrentUser();
-    notifyListeners();
+    await reloadUser();
   }
 
   Future<bool> login(String email, String password) async {

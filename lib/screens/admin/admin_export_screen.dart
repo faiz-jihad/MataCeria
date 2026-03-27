@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:cross_file/cross_file.dart';
 import '../../services/api_service.dart';
 
 class AdminExportScreen extends StatefulWidget {
@@ -24,7 +23,7 @@ class _AdminExportScreenState extends State<AdminExportScreen> {
     });
 
     try {
-      final List<dynamic> users = await _apiService.getAdminUsers();
+      final users = await _apiService.getAdminUsers();
       
       if (users.isEmpty) {
         setState(() {
@@ -37,7 +36,7 @@ class _AdminExportScreenState extends State<AdminExportScreen> {
       setState(() => _status = 'Menyusun format CSV...');
 
       // Generate CSV content
-      String csvContent = 'ID,Nama,Email,Umur,Kelamin,Role,Visi,Tanggal Daftar\n';
+      var csvContent = 'ID,Nama,Email,Umur,Kelamin,Role,Visi,Tanggal Daftar\n';
       for (var user in users) {
         csvContent += '${user['id']??""},';
         csvContent += '"${user['nama_lengkap'] ?? user['name'] ?? ""}",';
