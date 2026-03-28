@@ -46,6 +46,10 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
   int _unreadChats = 0;
   int _unreadNotifications = 0;
   io.File? _profileImage;
+  List<dynamic> _allArticles = [];
+  List<dynamic> _filteredArticles = [];
+  List<ServiceItem> _allServices = [];
+  List<ServiceItem> _filteredServices = [];
   
   // Controllers
   final TextEditingController _searchController = TextEditingController();
@@ -108,7 +112,9 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
         _loadUnreadChats(),
         _loadNotificationCount(),
         _loadProfileImage(),
+        _loadArticles(),
       ]);
+      _initializeServices();
     } catch (e) {
       ErrorHandler.handleError(e, context);
     }
@@ -206,7 +212,6 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
       if (mounted) setState(() => _unreadChats = 0);
     }
   }
-
   Future<void> _loadNotificationCount() async {
     try {
       final notifications = await _apiService.getNotifications().timeout(
@@ -216,9 +221,78 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
         setState(() => _unreadNotifications = notifications.length);
       }
     } catch (e) {
-      // Silently fail - notification count is not critical
       if (mounted) setState(() => _unreadNotifications = 0);
     }
+  }
+
+  void _initializeServices() {
+    _allServices = [
+      ServiceItem(
+        key: 'detect',
+        title: 'btn_detect'.tr(context),
+        icon: Icons.camera_alt_rounded,
+        color: const Color(0xFFE0F2FE),
+        iconColor: const Color(0xFF2563EB),
+        onTap: () => Navigator.pushNamed(context, '/refraction_test'),
+      ),
+      ServiceItem(
+        key: 'consult',
+        title: 'btn_consult'.tr(context),
+        icon: Icons.chat_bubble_outline_rounded,
+        color: const Color(0xFFFEF3C7),
+        iconColor: const Color(0xFFF59E0B),
+        badgeCount: _unreadChats,
+        onTap: () => Navigator.pushNamed(context, '/chat'),
+      ),
+      ServiceItem(
+        key: 'tips',
+        title: 'btn_tips'.tr(context),
+        icon: Icons.article_outlined,
+        color: const Color(0xFFE1F5FE),
+        iconColor: const Color(0xFF0284C7),
+        onTap: () => _showArticlesSheet(),
+      ),
+      ServiceItem(
+        key: 'location',
+        title: 'btn_location'.tr(context),
+        icon: Icons.location_on_outlined,
+        color: const Color(0xFFFEE2E2),
+        iconColor: const Color(0xFFEF4444),
+        onTap: () => _showEmergencyContactsSheet(),
+      ),
+    ];
+    _filteredServices = List.from(_allServices);
+  }
+
+  Future<void> _loadArticles() async {
+    try {
+      final articles = await _apiService.getArticles();
+      if (mounted) {
+        setState(() {
+          _allArticles = articles;
+          _filteredArticles = List.from(articles);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading articles: $e');
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredServices = List.from(_allServices);
+        _filteredArticles = List.from(_allArticles);
+      } else {
+        final q = query.toLowerCase();
+        _filteredServices = _allServices.where((s) => s.title.toLowerCase().contains(q)).toList();
+        _filteredArticles = _allArticles.where((a) {
+          final title = (a['title'] ?? '').toString().toLowerCase();
+          final content = (a['content'] ?? '').toString().toLowerCase();
+          return title.contains(q) || content.contains(q);
+        }).toList();
+      }
+    });
   }
 
   @override
@@ -429,48 +503,12 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        onChanged: (value) => setState(() {}),
+        onChanged: _onSearchChanged,
       ),
     );
   }
 
   Widget _buildServicesSection() {
-    final services = [
-      ServiceItem(
-        key: 'detect',
-        title: 'btn_detect'.tr(context),
-        icon: Icons.camera_alt_rounded,
-        color: const Color(0xFFE0F2FE),
-        iconColor: const Color(0xFF2563EB),
-        onTap: () => Navigator.pushNamed(context, '/refraction_test'),
-      ),
-      ServiceItem(
-        key: 'consult',
-        title: 'btn_consult'.tr(context),
-        icon: Icons.chat_bubble_outline_rounded,
-        color: const Color(0xFFFEF3C7),
-        iconColor: const Color(0xFFF59E0B),
-        badgeCount: _unreadChats,
-        onTap: () => Navigator.pushNamed(context, '/chat'),
-      ),
-      ServiceItem(
-        key: 'tips',
-        title: 'btn_tips'.tr(context),
-        icon: Icons.article_outlined,
-        color: const Color(0xFFE1F5FE),
-        iconColor: const Color(0xFF0284C7),
-        onTap: () => _showArticlesSheet(),
-      ),
-      ServiceItem(
-        key: 'location',
-        title: 'btn_location'.tr(context),
-        icon: Icons.location_on_outlined,
-        color: const Color(0xFFFEE2E2),
-        iconColor: const Color(0xFFEF4444),
-        onTap: () => _showEmergencyContactsSheet(),
-      ),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -483,10 +521,16 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
           ),
         ),
         const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: services.map((service) => ServiceCard(service: service)).toList(),
-        ),
+        if (_filteredServices.isEmpty && _searchController.text.isNotEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text('Layanan tidak ditemukan', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          )
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: _filteredServices.map((service) => ServiceCard(service: service)).toList(),
+          ),
       ],
     );
   }
@@ -708,8 +752,8 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
               );
             }
             
-            final activities = snapshot.data ?? [];
-            if (activities.isEmpty) {
+            final articles = _searchController.text.isNotEmpty ? _filteredArticles : (snapshot.data ?? []);
+            if (articles.isEmpty) {
               return Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
@@ -718,16 +762,18 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
                 ),
                 child: Column(
                   children: [
-                    Icon(Icons.history, size: 48, color: Colors.grey.shade400),
+                    Icon(
+                      _searchController.text.isNotEmpty ? Icons.search_off_rounded : Icons.history,
+                      size: 48,
+                      color: Colors.grey.shade400,
+                    ),
                     const SizedBox(height: 12),
                     Text(
-                      'activities_empty'.tr(context),
+                      _searchController.text.isNotEmpty 
+                          ? 'Mencari "${_searchController.text}" tidak ada hasil'
+                          : 'activities_empty'.tr(context),
                       style: TextStyle(color: Colors.grey.shade500),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'activities_subtitle'.tr(context),
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -735,7 +781,18 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
             }
             
             return Column(
-              children: activities.take(2).map((activity) {
+              children: articles.asMap().entries.take(3).map((entry) {
+                final index = entry.key;
+                final activity = entry.value;
+                // Determine if it's an article or activity
+                final isArticle = activity.containsKey('title') && activity.containsKey('content');
+                if (isArticle) {
+                  return ArticleCard(
+                    article: activity,
+                    index: index,
+                    onTap: () => _handleArticleTap(activity),
+                  );
+                }
                 return ActivityCard(
                   title: activity['title'] ?? 'Aktivitas',
                   subtitle: activity['description'] ?? '',
@@ -749,6 +806,11 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin, Automa
         ),
       ],
     );
+  }
+
+  void _handleArticleTap(Map<String, dynamic> article) {
+     // Show article animation or navigate
+     _showArticlesSheet(); // For now keep it simple
   }
 
   void _handleActivityTap(Map<String, dynamic> activity) {

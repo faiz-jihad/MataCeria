@@ -7,6 +7,7 @@ class AppStrings {
     'id': {
       'nav_home': 'Beranda',
       'nav_history': 'Riwayat',
+      'nav_kuisioner': 'Kuisioner',
       'nav_profile': 'Profil',
       'home_greeting': 'Halo, ',
       'home_desc': 'Jaga kesehatan mata Anda hari ini',
@@ -158,6 +159,7 @@ class AppStrings {
     'en': {
       'nav_home': 'Home',
       'nav_history': 'History',
+      'nav_kuisioner': 'Questionnaire',
       'nav_profile': 'Profile',
       'home_greeting': 'Hi, ',
       'home_desc': 'Take care of your eyes today',

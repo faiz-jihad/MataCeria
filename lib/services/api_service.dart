@@ -210,14 +210,22 @@ class ApiService {
     }
   }
 
-  // Chat Sessions
   Future<List<ChatSession>> getChatSessions() async {
     final url = Uri.parse('${ApiConfig.v2BaseUrl}${ApiConfig.chatSessions}');
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        return data.map((s) => ChatSession.fromJson(s)).toList();
+        final decoded = jsonDecode(response.body);
+        List? data;
+        if (decoded is List) {
+          data = decoded;
+        } else if (decoded is Map) {
+          data = decoded['data'] ?? decoded['results'] ?? decoded['sessions'];
+        }
+        
+        if (data != null) {
+          return data.map((s) => ChatSession.fromJson(s)).toList();
+        }
       }
     } catch (e) {
       // Silent fail for background tasks or low-priority data
@@ -395,16 +403,24 @@ class ApiService {
 
   // Emergency Contacts
   Future<List<EmergencyContact>> getEmergencyContacts({String? region}) async {
-    var urlStr = '$baseUrl${ApiConfig.emergencyContacts}';
-    if (region != null && region.isNotEmpty && region != 'Semua') {
-      urlStr += '?region=$region';
-    }
+    final selectedRegion = (region == null || region.isEmpty || region == 'Semua') ? 'Nasional' : region;
+    var urlStr = '${ApiConfig.fullBaseUrl}${ApiConfig.emergencyContacts}?region=$selectedRegion';
     final url = Uri.parse(urlStr);
     try {
       final response = await http.get(url, headers: await _getHeaders());
+      debugPrint('EMERGENCY_DEBUG: GET $url | ${response.statusCode}');
+      debugPrint('EMERGENCY_DEBUG: Body: ${response.body}');
+      
       if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        if (data.isNotEmpty) {
+        final decoded = jsonDecode(response.body);
+        List? data;
+        if (decoded is List) {
+           data = decoded;
+        } else if (decoded is Map) {
+           data = decoded['data'] ?? decoded['results'] ?? decoded['contacts'];
+        }
+
+        if (data != null && data.isNotEmpty) {
            return data.map((c) => EmergencyContact.fromJson(c)).toList();
         }
       }
@@ -460,7 +476,12 @@ class ApiService {
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) return decoded;
+        if (decoded is Map) {
+          return decoded['data'] ?? decoded['results'] ?? [];
+        }
+        return [];
       }
     } catch (e) {
       debugPrint('Error fetching predictions: $e');
@@ -533,7 +554,7 @@ class ApiService {
 
   // ========== ADMIN: EMERGENCY CONTACT CRUD ==========
   Future<Map<String, dynamic>> createEmergencyContact(Map<String, dynamic> data) async {
-    final url = Uri.parse('$baseUrl${ApiConfig.emergencyContacts}');
+    final url = Uri.parse('${ApiConfig.fullBaseUrl}${ApiConfig.emergencyContacts}');
     try {
       final response = await http.post(
         url,
@@ -550,7 +571,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> updateEmergencyContact(int id, Map<String, dynamic> data) async {
-    final url = Uri.parse('$baseUrl${ApiConfig.emergencyContacts}/$id');
+    final url = Uri.parse('${ApiConfig.fullBaseUrl}${ApiConfig.emergencyContacts}/$id');
     try {
       final response = await http.put(
         url,
@@ -697,7 +718,12 @@ class ApiService {
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) return decoded;
+        if (decoded is Map) {
+          return decoded['data'] ?? decoded['results'] ?? [];
+        }
+        return [];
       }
     } catch (e) {
       debugPrint('Error fetching activities: $e');
@@ -739,7 +765,12 @@ class ApiService {
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) return decoded;
+        if (decoded is Map) {
+          return decoded['data'] ?? decoded['results'] ?? [];
+        }
+        return [];
       }
     } catch (e) {
       debugPrint('DEBUG: Error fetching articles from $url: $e');
@@ -771,7 +802,12 @@ class ApiService {
     try {
       final response = await http.get(url, headers: await _getHeaders());
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) return decoded;
+        if (decoded is Map) {
+          return decoded['data'] ?? decoded['results'] ?? [];
+        }
+        return [];
       }
     } catch (_) {
       // Failed to load analytics, return default empty state
@@ -835,26 +871,37 @@ class ApiService {
   }) async {
     final url = Uri.parse('${ApiConfig.v2BaseUrl}${ApiConfig.aiRefractionV2}');
     
+    // Ensure base64 has prefix if missing
+    String finalImageBase64 = imageBase64;
+    if (!finalImageBase64.startsWith('data:image')) {
+      finalImageBase64 = 'data:image/jpeg;base64,$finalImageBase64';
+    }
+
     final payload = {
-      'user_id': userId ?? 'anonymous',
+      'user_id': userId ?? '1',
       'device_info': { 'screen_ppi': screenPpi },
       'snellen_data': {
-        'avg_distance_cm': snellenData['avg_distance_cm'],
-        'smallest_row_read': snellenData['smallest_row_read'],
-        'missed_chars': snellenData['missed_chars'],
-        'response_time': snellenData['response_time'],
+        'avg_distance_cm': snellenData['avg_distance_cm'] ?? 40.0,
+        'smallest_row_read': snellenData['smallest_row_read'] ?? 20,
+        'missed_chars': snellenData['missed_chars'] ?? 0,
+        'response_time': snellenData['response_time'] ?? 10.0,
       },
       'image_data': {
-        'eye_frame_base64': imageBase64
+        'eye_frame_base64': finalImageBase64
       }
     };
+
+    debugPrint('REFRACTION_DEBUG: POST $url');
+    // debugPrint('REFRACTION_DEBUG: Payload: ${jsonEncode(payload).substring(0, 200)}...');
 
     try {
       final response = await http.post(
         url,
         headers: await _getHeaders(),
         body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 20));
+
+      debugPrint('REFRACTION_DEBUG: Status ${response.statusCode} | Body: ${response.body}');
 
       if (response.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(response.body)};
@@ -864,6 +911,7 @@ class ApiService {
         'message': _handleStatusCodeError(response, 'Failed to process AI Refraction')
       };
     } catch (e) {
+      debugPrint('REFRACTION_DEBUG: Catch Error: $e');
       return {'success': false, 'message': e.toString()};
     }
   }

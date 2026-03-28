@@ -7,6 +7,7 @@ class Article {
     required this.title,
     required this.content,
     this.imageUrl,
+    this.shareUrl,
     this.category,
     this.date,
   });
@@ -17,6 +18,7 @@ class Article {
       title: json['title'] ?? 'Tanpa Judul',
       content: json['content'] ?? '',
       imageUrl: json['imageUrl'] ?? json['image_url'],
+      shareUrl: json['shareUrl'] ?? json['share_url'],
       category: json['category'],
       date: json['date'] ?? json['created_at'],
     );
@@ -25,6 +27,7 @@ class Article {
   final String title;
   final String content;
   final String? imageUrl;
+  final String? shareUrl;
   final String? category;
   final String? date;
 
@@ -34,6 +37,7 @@ class Article {
       'title': title,
       'content': content,
       'imageUrl': imageUrl,
+      'shareUrl': shareUrl,
       'category': category,
       'date': date,
     };

@@ -45,6 +45,7 @@ class _PredictionTabState extends State<PredictionTab>
 
     try {
       final response = await _apiService.getPredictions();
+      debugPrint('HISTORY_DEBUG: Raw Reports from Backend: $response');
       setState(() {
         _predictions = response.map((p) => Prediction.fromJson(p)).toList();
         _isLoading = false;

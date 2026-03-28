@@ -5,11 +5,11 @@ class ApiConfig {
   static String get baseUrl {
     try {
       final raw = dotenv.env['API_BASE_URL'] ??
-          'https://puts-investments-enjoyed-improve.trycloudflare.com';
+          'https://estimate-known-latex-library.trycloudflare.com/';
       return raw.endsWith('/') ? raw.substring(0, raw.length - 1) : raw;
     } catch (_) {
       // Fallback if dotenv is not initialized
-      return 'https://puts-investments-enjoyed-improve.trycloudflare.com';
+      return 'https://estimate-known-latex-library.trycloudflare.com';
     }
   }
 

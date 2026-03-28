@@ -13,12 +13,12 @@ class EmergencyContact {
 
   factory EmergencyContact.fromJson(Map<String, dynamic> json) {
     return EmergencyContact(
-      id: json['id'],
-      name: json['name'],
-      phone: json['phone'],
+      id: json['id'] ?? 0,
+      name: json['name'] ?? json['nama'] ?? 'Unknown',
+      phone: json['phone'] ?? json['nomor_telepon'] ?? json['nomorTelepon'] ?? '-',
       address: json['address'],
       city: json['city'],
-      type: json['type'],
+      type: json['type'] ?? json['category'] ?? json['kategori'] ?? 'hospital',
     );
   }
   final int id;

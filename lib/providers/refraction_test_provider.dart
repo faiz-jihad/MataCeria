@@ -289,13 +289,20 @@ class RefractionTestProvider with ChangeNotifier {
 
       if (result['success']) {
         final data = result['data'];
-        final results = data['results'] ?? {};
-        _aiResultCategory = results['predicted_class'] ?? data['kategori'] ?? 'Unknown';
-        _aiRecommendation = results['recommendation'];
-        _aiActionRequired = results['action_required'] ?? false;
-        _aiCanConsultChatbot = results['can_consult_chatbot'] ?? false;
-        _aiVisualAcuity = results['visual_acuity'];
-        _aiSnellenDecimal = (results['snellen_decimal'] as num?)?.toDouble();
+        debugPrint('REFRACTION_DEBUG: Raw Data from Backend: $data');
+        final results = data['results'] ?? data; 
+        
+        _aiResultCategory = results['predicted_class'] ?? 
+                            results['condition_category'] ?? 
+                            results['diagnosis'] ?? 
+                            data['kategori'] ?? 
+                            'Normal';
+
+        _aiRecommendation = results['recommendation'] ?? results['saran'];
+        _aiActionRequired = results['action_required'] ?? (_aiResultCategory != 'Normal');
+        _aiCanConsultChatbot = results['can_consult_chatbot'] ?? true;
+        _aiVisualAcuity = results['visual_acuity'] ?? results['tajam_penglihatan'];
+        _aiSnellenDecimal = (results['snellen_decimal'] as num?)?.toDouble() ?? (results['decimal'] as num?)?.toDouble();
 
         final dynamic confidenceValue = results['confidence'] ?? data['confidence'];
         if (confidenceValue != null) {

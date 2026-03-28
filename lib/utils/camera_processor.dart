@@ -13,22 +13,31 @@ class CameraProcessor {
     required CameraImage cameraImage,
     required int sensorOrientation,
   }) {
-    final allBytes = WriteBuffer();
-    for (final plane in cameraImage.planes) {
-      allBytes.putUint8List(plane.bytes);
-    }
-    final bytes = allBytes.done().buffer.asUint8List();
+    final bytes = cameraImage.planes[0].bytes; 
 
     final imageSize = Size(cameraImage.width.toDouble(), cameraImage.height.toDouble());
 
     final rotation = InputImageRotationValue.fromRawValue(sensorOrientation) 
-        ?? InputImageRotation.rotation0deg;
+        ?? InputImageRotation.rotation270deg;
 
-    final format = InputImageFormatValue.fromRawValue(cameraImage.format.raw) 
-        ?? (Platform.isAndroid ? InputImageFormat.yuv420 : InputImageFormat.bgra8888);
+    // Robust format mapping
+    InputImageFormat format;
+    final rawValue = cameraImage.format.raw;
+    
+    // Manual mapping for common problematic Android raw values
+    if (rawValue == 35) { // YUV_420_888
+      format = InputImageFormat.yuv420;
+    } else if (rawValue == 17) { // NV21
+      format = InputImageFormat.nv21;
+    } else if (rawValue == 1111970369) { // BGRA8888
+      format = InputImageFormat.bgra8888;
+    } else {
+      format = InputImageFormatValue.fromRawValue(rawValue) ?? 
+               (Platform.isAndroid ? InputImageFormat.nv21 : InputImageFormat.bgra8888);
+    }
 
-    debugPrint('CAMERA_DEBUG: Format raw=${cameraImage.format.raw} | mapped=${format.name}');
-    debugPrint('CAMERA_DEBUG: Size ${cameraImage.width}x${cameraImage.height} | Rotation $sensorOrientation');
+    debugPrint('CAMERA_DEBUG: Format raw=$rawValue | mapped=${format.name}');
+    debugPrint('CAMERA_DEBUG: Size ${cameraImage.width}x${cameraImage.height} | Rotation $sensorOrientation -> ${rotation.name}');
 
     return InputImage.fromBytes(
       bytes: bytes,
@@ -116,18 +125,46 @@ class CameraProcessor {
       final int height = data['height'];
       final List<Map<String, dynamic>> planesInfo = data['planesInfo'];
       final List<Uint8List> planesBytes = data['planesBytes'];
+      
+      img.Image? image;
 
-      // 1. Convert YUV to RGB using `image` package
-      var image = _convertYUV420ToImage(
-        width: width,
-        height: height,
-        plane0: planesBytes[0],
-        plane1: planesBytes[1],
-        plane2: planesBytes[2],
-        bytesPerRow0: planesInfo[0]['bytesPerRow'],
-        bytesPerRow1: planesInfo[1]['bytesPerRow'],
-        bytesPerPixel1: planesInfo[1]['bytesPerPixel'],
-      );
+      // Handle different plane counts/formats
+      if (planesBytes.length >= 3) {
+        // Standard 3-plane YUV420
+        image = _convertYUV420ToImage(
+          width: width,
+          height: height,
+          plane0: planesBytes[0],
+          plane1: planesBytes[1],
+          plane2: planesBytes[2],
+          bytesPerRow0: planesInfo[0]['bytesPerRow'],
+          bytesPerRow1: planesInfo[1]['bytesPerRow'],
+          bytesPerPixel1: planesInfo[1]['bytesPerPixel'],
+        );
+      } else if (planesBytes.length == 2) {
+        // NV21 (Y + interleaved UV)
+        image = _convertNV21ToImage(
+          width: width,
+          height: height,
+          yPlane: planesBytes[0],
+          uvPlane: planesBytes[1],
+          yBytesPerRow: planesInfo[0]['bytesPerRow'],
+          uvBytesPerRow: planesInfo[1]['bytesPerRow'],
+          uvPixelStride: planesInfo[1]['bytesPerPixel'] ?? 2,
+        );
+      } else if (planesBytes.length == 1) {
+        // Single plane (Likely BGRA or interleaved NV21)
+        // For now, if single plane, try to treat as grayscale if we don't know the format,
+        // or just use the first plane.
+        image = _convertSinglePlaneToImage(
+          width: width,
+          height: height,
+          bytes: planesBytes[0],
+          bytesPerRow: planesInfo[0]['bytesPerRow'],
+        );
+      }
+
+      if (image == null) return null;
 
       // 2. Rotate image based on sensor orientation
       final int rotationAngle = data['sensorOrientation'];
@@ -214,12 +251,72 @@ class CameraProcessor {
         var g = (yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128)).toInt();
         var b = (yValue + 1.772 * (uValue - 128)).toInt();
 
-        // Clamp
-        r = r.clamp(0, 255);
-        g = g.clamp(0, 255);
-        b = b.clamp(0, 255);
+        image.setPixelRgb(x, y, r.clamp(0, 255), g.clamp(0, 255), b.clamp(0, 255));
+      }
+    }
+    return image;
+  }
 
-        image.setPixelRgb(x, y, r, g, b);
+  // Helper NV21 to RGB
+  static img.Image _convertNV21ToImage({
+    required int width,
+    required int height,
+    required Uint8List yPlane,
+    required Uint8List uvPlane,
+    required int yBytesPerRow,
+    required int uvBytesPerRow,
+    required int uvPixelStride,
+  }) {
+    final image = img.Image(width: width, height: height);
+
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final yIndex = y * yBytesPerRow + x;
+        final uvIndex = (y >> 1) * uvBytesPerRow + (x >> 1) * uvPixelStride;
+
+        final yValue = yPlane[yIndex];
+        // NV21 is V, U interleaved. Index 0 is V, Index 1 is U if pixelStride is 2.
+        final vValue = uvPlane[uvIndex];
+        final uValue = uvPlane[uvIndex + 1 < uvPlane.length ? uvIndex + 1 : uvIndex];
+
+        var r = (yValue + 1.402 * (vValue - 128)).toInt();
+        var g = (yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128)).toInt();
+        var b = (yValue + 1.772 * (uValue - 128)).toInt();
+
+        image.setPixelRgb(x, y, r.clamp(0, 255), g.clamp(0, 255), b.clamp(0, 255));
+      }
+    }
+    return image;
+  }
+
+  // Fallback for single plane (Grayscale or BGRA)
+  static img.Image _convertSinglePlaneToImage({
+    required int width,
+    required int height,
+    required Uint8List bytes,
+    required int bytesPerRow,
+  }) {
+    final image = img.Image(width: width, height: height);
+    
+    // Check if it looks like BGRA8888 (4 bytes per pixel)
+    if (bytes.length >= width * height * 4) {
+       for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          final i = y * bytesPerRow + x * 4;
+          // BGRA
+          image.setPixelRgb(x, y, bytes[i+2], bytes[i+1], bytes[i]);
+        }
+      }
+    } else {
+      // Just assume grayscale/Y-only
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          final yIndex = y * bytesPerRow + x;
+          if (yIndex < bytes.length) {
+            final val = bytes[yIndex];
+            image.setPixelRgb(x, y, val, val, val);
+          }
+        }
       }
     }
     return image;

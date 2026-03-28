@@ -14,6 +14,7 @@ import '../utils/analytics_helper.dart';
 import 'home_tab.dart';
 import 'prediction_tab.dart';
 import 'profile_tab.dart';
+import 'kuisioner_tab.dart';
 import '../l10n/app_strings.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -39,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
     0: GlobalKey(),
     1: GlobalKey(),
     2: GlobalKey(),
+    3: GlobalKey(),
   };
 
   @override
@@ -58,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
         onTabSelected: _onNavItemTapped,
       ),
       const PredictionTab(key: ValueKey('prediction_tab')),
+      const KuisionerTab(key: ValueKey('kuisioner_tab')),
       const ProfileTab(key: ValueKey('profile_tab')),
     ];
     _pageController = PageController(initialPage: _selectedIndex);
@@ -69,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
       duration: const Duration(milliseconds: 400),
     )..forward();
 
-    _bottomNavControllers = List.generate(3, (index) {
+    _bottomNavControllers = List.generate(4, (index) {
       return AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 250),
@@ -212,7 +215,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
     switch (index) {
       case 0: return 'home_tab';
       case 1: return 'prediction_tab';
-      case 2: return 'profile_tab';
+      case 2: return 'kuisioner_tab';
+      case 3: return 'profile_tab';
       default: return 'unknown';
     }
   }
@@ -272,6 +276,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
         activeIcon: Icons.assignment_rounded,
         label: 'nav_history'.tr(context),
         badgeCount: _unreadChatCount,
+      ),
+      CustomNavItem(
+        icon: Icons.quiz_outlined,
+        activeIcon: Icons.quiz_rounded,
+        label: 'nav_kuisioner'.tr(context),
       ),
       CustomNavItem(
         icon: Icons.person_outline,

@@ -23,6 +23,7 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
   bool _isDetecting = false;
   DateTime? _lastDetectionTime;
   bool _cameraInitialized = false;
+  bool _faceFound = false;
 
   @override
   void initState() {
@@ -45,8 +46,18 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
         frontCamera,
         ResolutionPreset.medium,
         enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.yuv420,
+        imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
       );
+      
+      // Fallback for older camera plugin versions that might not support nv21
+      if (Platform.isAndroid && _cameraController!.imageFormatGroup == ImageFormatGroup.unknown) {
+         _cameraController = CameraController(
+            frontCamera,
+            ResolutionPreset.medium,
+            enableAudio: false,
+            imageFormatGroup: ImageFormatGroup.yuv420,
+         );
+      }
 
       await _cameraController!.initialize();
       if (!mounted) return;
@@ -91,6 +102,10 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
 
       final faces = await _faceDetector!.processImage(inputImage);
       
+      if (mounted) {
+        setState(() => _faceFound = faces.isNotEmpty);
+      }
+      
       if (faces.isEmpty) {
         if (mounted && provider.testStatus != TestStatus.finished) {
            provider.updateDistanceLocally(0.0, 0.0);
@@ -114,6 +129,8 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
         if (provider.testStatus == TestStatus.finished && !provider.isProcessingAI && provider.aiResultCategory == null) {
           unawaited(_cameraController?.stopImageStream());
           
+          debugPrint('REFRACTION_DEBUG: Test finished. Processing eye crop...');
+
           final eyeCropBase64 = await CameraProcessor.processEyeRegionBase64(
             cameraImage: image,
             face: targetFace,
@@ -132,6 +149,8 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
             if (mounted) {
               unawaited(Provider.of<AuthProvider>(context, listen: false).reloadUser());
             }
+          } else {
+             debugPrint('REFRACTION_DEBUG: Failed to generate eye crop.');
           }
         }
       }
@@ -182,6 +201,7 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
 
   @override
   void dispose() {
+    _cameraController?.stopImageStream();
     _cameraController?.dispose();
     _faceDetector?.close();
     super.dispose();
@@ -224,37 +244,51 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: statusColor,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                color: statusColor.withValues(alpha: 0.9),
+                child: Column(
                   children: [
-                    if (provider.isDetectingRemote && !provider.isCalibrated) ...[
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
                     Text(
                       statusText,
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Posisikan mata tepat di dalam kotak & jarak 30-40 cm.',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                     if (distance > 0) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${distance.toStringAsFixed(1)} cm',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
+                    const SizedBox(height: 8),
+                    // Face feedback
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _faceFound ? Icons.face : Icons.face_retouching_off,
+                          color: _faceFound ? Colors.white : Colors.white70,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _faceFound ? 'Mata Terdeteksi' : 'Posisikan Mata',
+                          style: const TextStyle(color: Colors.white, fontSize: 11),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -523,16 +557,6 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildResultStat('Snellen Score', '20/${provider.smallestRowRead}'),
-                  if (provider.aiSnellenDecimal != null)
-                    _buildResultStat('Decimal', provider.aiSnellenDecimal!.toStringAsFixed(2)),
-                  _buildResultStat('Avg Distance', '${provider.currentDistanceCm.toStringAsFixed(1)} cm'),
-                ],
-              ),
               const SizedBox(height: 32),
               if (provider.aiCanConsultChatbot) ...[
                 ElevatedButton.icon(
@@ -597,4 +621,5 @@ class _AIRefractionTestScreenState extends State<AIRefractionTestScreen> {
       ],
     );
   }
+
 }

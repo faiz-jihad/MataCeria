@@ -1,6 +1,7 @@
 // lib/models/prediction_model.dart
 
 import 'package:flutter/material.dart';
+import '../config/api_config.dart';
 class Prediction {
 
   Prediction({
@@ -18,18 +19,31 @@ class Prediction {
 
   factory Prediction.fromJson(Map<String, dynamic> json) {
     final results = json['results'] ?? {};
+    
+    // Robust parsing for V2 backend fields
+    final String rClass = results['predicted_class'] ?? 
+                         json['predicted_class'] ?? 
+                         results['condition_category'] ??
+                         json['condition_category'] ??
+                         json['result_class'] ?? 
+                         json['class_name'] ?? 
+                         'Unknown';
+                         
+    double conf = (results['confidence'] ?? json['confidence'] ?? 0.0).toDouble();
+    if (conf > 0 && conf <= 1.0) conf = conf * 100;
+
     return Prediction(
       id: json['id'] ?? 0,
-      resultClass: results['predicted_class'] ?? json['result_class'] ?? json['class_name'] ?? 'Unknown',
-      confidence: (results['confidence'] ?? json['confidence'] ?? 0.0).toDouble(),
-      imageUrl: json['image_url'] ?? '',
+      resultClass: rClass,
+      confidence: conf / 100, // Keep internally as 0-1
+      imageUrl: json['image_url'] ?? results['image_url'] ?? '',
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
-      visualAcuity: results['visual_acuity'] ?? json['visual_acuity'],
-      snellenDecimal: (results['snellen_decimal'] ?? json['snellen_decimal'] as num?)?.toDouble(),
-      recommendation: results['recommendation'] ?? json['recommendation'],
-      actionRequired: results['action_required'] ?? json['action_required'] ?? false,
+      visualAcuity: results['visual_acuity'] ?? json['visual_acuity'] ?? results['tajam_penglihatan'],
+      snellenDecimal: (results['snellen_decimal'] ?? json['snellen_decimal'] ?? json['decimal'] as num?)?.toDouble(),
+      recommendation: results['recommendation'] ?? json['recommendation'] ?? results['saran'],
+      actionRequired: results['action_required'] ?? json['action_required'] ?? (rClass != 'Normal'),
       canConsultChatbot: results['can_consult_chatbot'] ?? json['can_consult_chatbot'] ?? false,
     );
   }
@@ -48,7 +62,8 @@ class Prediction {
   String get fullImageUrl {
     if (imageUrl.isEmpty) return '';
     if (imageUrl.startsWith('http')) return imageUrl;
-    return 'https://non-triumph-storm-normally.trycloudflare.com$imageUrl';
+    // Use the root baseUrl (without /api/v1 prefix) for static media
+    return '${ApiConfig.baseUrl}$imageUrl';
   }
   
   String get className {

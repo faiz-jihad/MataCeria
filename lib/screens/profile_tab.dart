@@ -16,6 +16,7 @@ import '../l10n/app_strings.dart';
 import '../providers/theme_provider.dart';
 import '../utils/screen_utils.dart';
 import '../utils/constants.dart';
+import '../models/prediction_model.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -48,6 +49,7 @@ class _ProfileTabState extends State<ProfileTab>
   String _occupation = 'Pelajar/Mahasiswa';
   List<String> _visionConcerns = [];
   io.File? _imageFile;
+  Prediction? _latestPrediction;
 
   bool _isSavingProfile = false;
   bool _isImageUploading = false;
@@ -59,6 +61,7 @@ class _ProfileTabState extends State<ProfileTab>
     _tabController = TabController(length: 2, vsync: this);
     _loadSettings();
     _loadUserData();
+    _loadLatestPrediction();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<EyeRefractionProvider>(
         context,
@@ -78,6 +81,19 @@ class _ProfileTabState extends State<ProfileTab>
     _ageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadLatestPrediction() async {
+    try {
+      final predictions = await ApiService().getPredictions();
+      if (predictions.isNotEmpty && mounted) {
+        setState(() {
+          _latestPrediction = Prediction.fromJson(predictions.first);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading latest prediction for profile: $e');
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -187,7 +203,7 @@ class _ProfileTabState extends State<ProfileTab>
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.updateUserProfile({
+      final payload = {
         'nama_lengkap': name,
         'umur': int.tryParse(_ageController.text),
         'kelamin': _gender,
@@ -198,7 +214,10 @@ class _ProfileTabState extends State<ProfileTab>
         'allergies': _allergiesController.text.trim(),
         'medical_history': _medicalHistoryController.text.trim(),
         'vision_concerns': _visionConcerns,
-      });
+      };
+      debugPrint('UPDATE_PROFILE_DEBUG: Sending Payload: $payload');
+      
+      final success = await authProvider.updateUserProfile(payload);
 
       if (success && mounted) {
         _showSuccessSnackBar('prof_success'.tr(context));
@@ -660,10 +679,37 @@ class _ProfileTabState extends State<ProfileTab>
             gradientColors: [const Color(0xFF10B981), const Color(0xFF059669)],
             child: Column(
               children: [
-                _buildEditableField(
-                  label: 'prof_vision_type'.tr(context),
-                  controller: _visionTypeController,
-                  hint: 'Normal, rabun jauh, rabun dekat, dll.',
+                if (_latestPrediction != null) ...[
+                  _buildLatestTestResult(),
+                  const SizedBox(height: 18),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildEditableField(
+                        label: 'prof_vision_type'.tr(context),
+                        controller: _visionTypeController,
+                        hint: 'Normal, rabun jauh, rabun dekat, dll.',
+                      ),
+                    ),
+                    if (_isEditing && _latestPrediction != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20, left: 8),
+                        child: TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _visionTypeController.text = _latestPrediction!.className;
+                            });
+                          },
+                          icon: const Icon(Icons.auto_awesome, size: 14),
+                          label: const Text('Gunakan Hasil Tes', style: TextStyle(fontSize: 10)),
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF10B981),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 _buildChipsField(
@@ -746,45 +792,50 @@ class _ProfileTabState extends State<ProfileTab>
                   ),
                 ),
                 const Spacer(),
-                if (_isEditing)
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _updateProfile,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _isEditing 
+                        ? _updateProfile 
+                        : () => setState(() => _isEditing = true),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: gradientColors[0].withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: gradientColors[0].withOpacity(0.2),
                         ),
-                        decoration: BoxDecoration(
-                          color: gradientColors[0].withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: gradientColors[0].withOpacity(0.2),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isEditing 
+                                ? Icons.check_circle_rounded 
+                                : Icons.edit_rounded,
+                            size: 16,
+                            color: gradientColors[0],
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle_rounded,
-                              size: 16,
+                          const SizedBox(width: 6),
+                          Text(
+                            _isEditing 
+                                ? 'prof_save'.tr(context) 
+                                : 'prof_edit'.tr(context),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
                               color: gradientColors[0],
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'prof_save'.tr(context),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: gradientColors[0],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
@@ -793,6 +844,65 @@ class _ProfileTabState extends State<ProfileTab>
             child: Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
           ),
           Padding(padding: const EdgeInsets.all(18), child: child),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLatestTestResult() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFBBF7D0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFDCFCE7),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.analytics_rounded,
+              color: Color(0xFF166534),
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Hasil Tes Terakhir (AI)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF166534),
+                  ),
+                ),
+                Text(
+                  _latestPrediction!.className,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF14532D),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            _latestPrediction!.confidencePercent,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF166534).withOpacity(0.7),
+            ),
+          ),
         ],
       ),
     );
