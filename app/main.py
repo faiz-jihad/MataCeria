@@ -52,13 +52,25 @@ async def log_requests(request: Request, call_next):
 
 # CORS Configuration
 allowed_origins = settings.ALLOWED_ORIGINS.split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+# Jika menggunakan "*" dan allow_credentials=True, FastAPI akan Error.
+# Kita tangani dengan mengizinkan semua origin secara dinamis jika "*" disetel.
+if "*" in allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=".*", # Mengizinkan semua origin dengan regex agar kompatibel dengan credentials
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # --- ROUTERS ---
 

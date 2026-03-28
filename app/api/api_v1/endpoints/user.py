@@ -21,7 +21,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def get_user_profile(current_user: models.User = Depends(get_current_user)):
     return current_user
 
-@router.put("/me", response_model=schemas.UserResponse)
+@router.put("/me", response_model=schemas.ProfileUpdateResponse)
 async def update_user_profile(
     request: schemas.UserUpdate,
     db: Session = Depends(get_db),
@@ -34,7 +34,7 @@ async def update_user_profile(
     
     db.commit()
     db.refresh(current_user)
-    return current_user
+    return {"status": "success", "data": current_user}
 
 @router.put("/settings", response_model=schemas.UserResponse)
 async def update_security_settings(

@@ -17,7 +17,7 @@ class UserUpdate(BaseModel):
     kelamin: Optional[str] = None
     jenjang_pendidikan: Optional[str] = None
     status_pekerjaan: Optional[str] = None
-    phone_number: Optional[str] = None
+    phone: Optional[str] = None
     vision_concerns: Optional[List[str]] = None
     allergies: Optional[str] = None
     medical_history: Optional[str] = None
@@ -32,10 +32,12 @@ class UserResponse(BaseModel):
     email: EmailStr
     umur: int
     kelamin: str
+    jenjang_pendidikan: Optional[str] = None
+    status_pekerjaan: Optional[str] = None
     role: str
     profile_image: Optional[str] = None
     is_2fa_enabled: bool = False
-    phone_number: Optional[str] = None
+    phone: Optional[str] = None
     vision_concerns: Optional[List[str]] = None
     allergies: Optional[str] = None
     medical_history: Optional[str] = None
@@ -43,6 +45,10 @@ class UserResponse(BaseModel):
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class ProfileUpdateResponse(BaseModel):
+    status: str = "success"
+    data: UserResponse
 
 class UserActivityResponse(BaseModel):
     id: int

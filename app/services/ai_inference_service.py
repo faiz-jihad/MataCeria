@@ -132,11 +132,57 @@ class AIRefractionService:
                 ai_class = rule_class
                 ai_confidence = 1.0
         else:
-            # Simulated inference if model doesn't exist
-            # For demonstration, we'll try to guess based on rule_class to emulate AI
-            ai_class = rule_class
-            ai_confidence = 0.85
-            source = "mock_hybrid_model_missing"
+            # --- GEMINI VISION FALLBACK (Dynamic AI) ---
+            from app.core.config import settings
+            import google.generativeai as genai
+            import PIL.Image
+            import io
+
+            try:
+                logger.info("Local model missing, falling back to Gemini Vision multimodal...")
+                genai.configure(api_key=settings.GEMINI_API_KEY)
+                v_model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                # Convert base64 to PIL
+                if ',' in request_data.image_data.eye_frame_base64:
+                    b64_data = request_data.image_data.eye_frame_base64.split(',')[1]
+                else:
+                    b64_data = request_data.image_data.eye_frame_base64
+                
+                img_pil = PIL.Image.open(io.BytesIO(base64.b64decode(b64_data)))
+                
+                # Multi-modal prompt
+                prompt = f"""
+                Analyze this eye image for a refraction screening app. 
+                Patient Snellen score is {snellen_fraction} (decimal {decimal_acuity}).
+                
+                Compare the visual signs (eye strain, redness, clarity) with the Snellen score.
+                Classify into one of these integers:
+                0: Normal
+                1: Mild Impairment
+                2: Myopia (Rabun Jauh)
+                3: Severe Impairment
+                
+                Respond in exactly this JSON format:
+                {{"class": integer, "confidence": float, "analysis": "brief reasoning"}}
+                """
+                
+                response = v_model.generate_content([prompt, img_pil])
+                import json
+                # Extract JSON from response.text (handle potential markdown blocks)
+                res_text = response.text.strip().replace('```json', '').replace('```', '')
+                res_json = json.loads(res_text)
+                
+                ai_class = int(res_json.get("class", rule_class))
+                ai_confidence = float(res_json.get("confidence", 0.85))
+                source = "gemini_multimodal_vision"
+                logger.info(f"Gemini Vision Result: {ai_class} (Conf: {ai_confidence}) - {res_json.get('analysis')}")
+                
+            except Exception as e:
+                logger.error(f"Gemini Vision fallback failed: {e}")
+                ai_class = rule_class
+                ai_confidence = 0.85
+                source = "mock_hybrid_fallback_failed"
 
         # --- 4. HYBRID DECISION LOGIC ---
         # final_score = (0.6 * AI_prediction) + (0.4 * Snellen_rule)

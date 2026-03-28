@@ -20,7 +20,7 @@ class User(Base):
     # Data Profil & Keamanan (Sync Baru)
     profile_image = Column(String, nullable=True) # Path to image
     is_2fa_enabled = Column(Boolean, default=False)
-    phone_number = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
 
     # Data Kesehatan Mata (Vision Data)
     vision_concerns = Column(JSON, nullable=True) # List of concerns

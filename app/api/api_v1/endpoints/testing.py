@@ -48,14 +48,50 @@ async def upload_test_result(
     log_activity(db, current_user.id, "Tes Mata", f"Hasil: {hasil} ({dioptri})")
     return riwayat_baru
 
-@router.get("/refraction-test", response_model=List[schemas.RiwayatTesResponse])
-@router.get("/predictions", response_model=List[schemas.RiwayatTesResponse])
+@router.get("/refraction-test", response_model=schemas.RefractionHistoryResponse)
+@router.get("/predictions", response_model=schemas.RefractionHistoryResponse)
 async def get_predictions(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    """
+    Returns standardized prediction history for the mobile app.
+    """
     riwayat = db.query(models.RiwayatTes)\
         .filter(models.RiwayatTes.user_id == current_user.id)\
         .order_by(models.RiwayatTes.waktu_tes.desc())\
         .all()
-    return riwayat
+    
+    formatted_data = []
+    for item in riwayat:
+        # Pengecekan standar untuk image_url
+        img_url = item.image_path
+        if img_url and not img_url.startswith("/"):
+            img_url = f"/{img_url}"
+
+        # Mapping data medis ke nested 'results'
+        # Kita coba parsing rekomendasi dari catatan_admin jika ada
+        recommendation = "Silakan konsultasi dokter."
+        if item.catatan_admin and "AI Recommendation: " in item.catatan_admin:
+            recommendation = item.catatan_admin.replace("AI Recommendation: ", "")
+
+        history_item = schemas.RefractionHistoryItem(
+            id=item.id,
+            created_at=item.waktu_tes,
+            image_url=img_url,
+            predicted_class=item.hasil_klasifikasi,
+            confidence=item.confidence_score,
+            results=schemas.RefractionTestResult(
+                visual_acuity=item.estimasi_dioptri,
+                snellen_decimal=0.0, # Legacy data might not have decimals saved
+                category=item.hasil_klasifikasi,
+                condition_category="Miopia", # Default fallback
+                recommendation=recommendation
+            )
+        )
+        formatted_data.append(history_item)
+
+    return {
+        "status": "success",
+        "data": formatted_data
+    }

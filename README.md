@@ -10,10 +10,14 @@ Sistem backend cerdas berbasis AI untuk **MataCeria** — aplikasi asisten keseh
 
 ## 🚀 Fitur Utama & Pembaruan Produksi
 
-- 🧬 **Hybrid AI Refraction (V2)**: Gabungan model **TensorFlow** dan **Rule-based Snellen** dengan deteksi jarak wajah real-time.
+- 🧬 **Hybrid AI Refraction (V2)**: Gabungan model **TensorFlow** (Local) dan **Gemini Vision 1.5 Flash** (Fallback) untuk hasil analisis mata yang dinamis dan akurat.
+- 📱 **Mobile-First Synchronization**: 
+    - **Nested History JSON**: Struktur ringkas untuk sinkronisasi riwayat pemeriksaan yang lebih cepat di Flutter.
+    - **Partial Profile Sync**: Pembaruan profil yang fleksibel (PATCH behavior) untuk data kependudukan dan riwayat kesehatan mata.
 - 💬 **AI Consultation (Gemini v2)**: Chatbot medis berbasis LLM terintegrasi untuk bimbingan kesehatan mata.
+- 🗺️ **National Data Hub**: Database 65+ rumah sakit mata nasional dan 20+ artikel kesehatan mata premium siap guna.
 - 🛡️ **Production Ready**: 
-    - **Modular Structure**: Pemisahan Model, Schema, dan Endpoint untuk maintainability.
+    - **Modular Structure**: Pemisahan Model, Schema, dan Endpoint untuk maintainability tinggi.
     - **Security Headers**: Proteksi bawaan terhadap XSS, Clickjacking, dan HSTS.
     - **Rate Limiting**: Pencegahan abuse API menggunakan SlowAPI.
 - 🔄 **CI/CD Pipeline**: Integrasi otomatis melalui **GitHub Actions** untuk linting, testing, dan build verification.
@@ -61,14 +65,11 @@ docker-compose up --build -d
 ### 3. Inisialisasi Data (WAJIB!)
 Gunakan perintah modular untuk mengisi database awal:
 ```bash
-# Isi Data Dasar (Admin & RS)
+# Isi Data Dasar (Admin, RS, & Artikel)
 docker exec -it fastapi_refraksi python -m scripts.seed_data
 
-# Isi Artikel Resmi
-docker exec -it fastapi_refraksi python -m scripts.seed_articles
-
-# Isi Data Regional RS Mata (40+)
-docker exec -it fastapi_refraksi python -m scripts.seed_regional_data
+# Isi Data Nasional & Premium (RS Mata & Artikel)
+docker exec -it fastapi_refraksi python -m scripts.seed_national_data
 ```
 
 ---

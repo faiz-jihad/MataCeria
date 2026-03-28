@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, computed_field
 from typing import Optional
 import datetime
 
@@ -24,12 +24,20 @@ class ArticleResponse(ArticleBase):
     id: int
     title: str
     content: str
-    imageUrl: Optional[str] = Field(None, alias="image_url")
-    shareUrl: Optional[str] = Field(None, alias="share_url")
     category: Optional[str] = "Tips Kesehatan"
     date: str # Terformat untuk Flutter (e.g. "24 Mar 2026")
 
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    @computed_field
+    @property
+    def imageUrl(self) -> Optional[str]:
+        return self.image_url
+
+    @computed_field
+    @property
+    def shareUrl(self) -> Optional[str]:
+        return self.share_url
+
+    model_config = ConfigDict(from_attributes=True)
 
 # --- EMERGENCY SCHEMAS ---
 class EmergencyContactBase(BaseModel):
@@ -55,9 +63,26 @@ class EmergencyContactUpdate(BaseModel):
 
 class EmergencyContactResponse(EmergencyContactBase):
     id: int
-    nama: str
-    nomor_telepon: str
-    kategori: str
+
+    @computed_field
+    @property
+    def name(self) -> str:
+        return self.nama
+
+    @computed_field
+    @property
+    def phone(self) -> str:
+        return self.nomor_telepon
+
+    @computed_field
+    @property
+    def nomorTelepon(self) -> str:
+        return self.nomor_telepon
+
+    @computed_field
+    @property
+    def category(self) -> str:
+        return self.kategori
 
     model_config = ConfigDict(from_attributes=True)
 

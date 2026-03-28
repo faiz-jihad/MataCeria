@@ -8,7 +8,7 @@ from app.core.security import get_current_user
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.NotificationResponse])
+@router.get("", response_model=List[schemas.NotificationResponse])
 async def get_notifications(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)

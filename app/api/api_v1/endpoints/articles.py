@@ -21,24 +21,15 @@ def format_indo_date(dt):
     months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
     return f"{dt.day} {months[dt.month-1]} {dt.year}"
 
-@router.get("/", response_model=List[schemas.ArticleResponse])
+@router.get("", response_model=List[schemas.ArticleResponse])
 async def get_articles(db: Session = Depends(get_db)):
     articles = db.query(models.Article).order_by(models.Article.created_at.desc()).all()
     
-    # Transform data agar sesuai schema (imageUrl, date string)
-    result = []
+    # Transform for date formatting (required by the response schema)
     for art in articles:
-        result.append({
-            "id": art.id,
-            "title": art.title,
-            "imageUrl": art.image_url,
-            "share_url": art.share_url, # New field
-            "category": art.category or "Edukasi",
-            "date": format_indo_date(art.created_at),
-            "content": art.content
-        })
-    return result
-@router.post("/", response_model=schemas.ArticleResponse, status_code=status.HTTP_201_CREATED)
+        setattr(art, "date", format_indo_date(art.created_at))
+    return articles
+@router.post("", response_model=schemas.ArticleResponse, status_code=status.HTTP_201_CREATED)
 async def create_article(
     article: schemas.ArticleCreate, 
     db: Session = Depends(get_db),

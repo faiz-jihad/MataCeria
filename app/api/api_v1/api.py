@@ -15,3 +15,7 @@ api_router.include_router(emergency.router, prefix="/emergency/contacts", tags=[
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 api_router.include_router(admin.router, prefix="/admin", tags=["Admin Tools"])
 api_router.include_router(misc.router, prefix="", tags=["Miscellaneous"])
+
+@api_router.get("/health", tags=["Health"])
+async def api_v1_health():
+    return {"status": "ok", "version": "v1"}

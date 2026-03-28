@@ -8,7 +8,7 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.EmergencyContactResponse])
+@router.get("", response_model=List[schemas.EmergencyContactResponse])
 async def get_emergency_contacts(
     region: Optional[str] = None,
     db: Session = Depends(get_db)
@@ -18,7 +18,7 @@ async def get_emergency_contacts(
         query = query.filter(models.EmergencyContact.region.ilike(f"%{region}%"))
     contacts = query.all()
     return contacts
-@router.post("/", response_model=schemas.EmergencyContactResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=schemas.EmergencyContactResponse, status_code=status.HTTP_201_CREATED)
 async def create_emergency_contact(
     contact: schemas.EmergencyContactCreate,
     db: Session = Depends(get_db),

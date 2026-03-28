@@ -66,13 +66,11 @@ class RefractionService:
             return "Visual Impairment", "Consult ophthalmologist"
 
     @classmethod
-    def process_screening(cls, raw_data, device_info) -> dict:
+    def process_screening(cls, raw_data, device_info, test_type: str = "distance_vision") -> dict:
         """
         Process the entire screening test data and generate result.
+        Supports Distance Vision (Miopia) and Near Vision (Hypermetropia/Presbyopia).
         """
-        # Calculate physical size validation (can be used for analytics/logs)
-        # Assuming letter height in pixels for row 8 might be e.g. 50px as an arbitrary check if we had it.
-        # Here we just log screen width in mm
         screen_width_mm = cls.calculate_physical_size_mm(device_info.screen_width_px, device_info.screen_ppi)
         logger.info(f"Screen physical width validated: {screen_width_mm:.2f} mm")
 
@@ -82,11 +80,38 @@ class RefractionService:
             missed_chars=raw_data.missed_chars
         )
 
-        category, recommendation = cls.classify_vision(decimal_acuity)
+        # Baseline Classification
+        category, base_recommendation = cls.classify_vision(decimal_acuity)
+        
+        # Multi-Condition Logic
+        condition = "Normal"
+        is_cylinder = getattr(raw_data, 'astigmatism_found', False)
+        
+        if decimal_acuity < 1.0:
+            if test_type == "near_vision":
+                condition = "Hipermetropia / Presbiopia"
+            else:
+                condition = "Miopia (Rabun Jauh)"
+        
+        if is_cylinder:
+            if condition == "Normal":
+                condition = "Astigmatisme (Silinder)"
+            else:
+                condition += " & Astigmatisme"
+
+        # Refined Recommendation
+        recommendation = base_recommendation
+        if condition != "Normal":
+            if test_type == "near_vision":
+                recommendation = "Gunakan kacamata baca atau konsultasikan untuk koreksi rabun dekat."
+            elif is_cylinder:
+                recommendation = "Disarankan tes refraksi lengkap untuk menentukan derajat silinder (Axis)."
 
         return {
             "visual_acuity": snellen_fraction,
             "snellen_decimal": round(decimal_acuity, 2),
             "category": category,
+            "condition_category": condition,
+            "is_cylinder": is_cylinder,
             "recommendation": recommendation
         }

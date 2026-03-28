@@ -12,6 +12,8 @@ class RiwayatTesResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+
 class RefractionDeviceInfo(BaseModel):
     screen_ppi: float
     screen_width_px: int
@@ -20,17 +22,20 @@ class RefractionRawData(BaseModel):
     avg_distance_cm: float
     smallest_row_read: int
     missed_chars: int
+    astigmatism_found: Optional[bool] = False # True if user sees distorted lines
 
 class RefractionTestRequest(BaseModel):
     user_id: str
-    test_type: str
+    test_type: str # "distance_vision" or "near_vision"
     device_info: RefractionDeviceInfo
     raw_data: RefractionRawData
 
 class RefractionTestResult(BaseModel):
     visual_acuity: str
     snellen_decimal: float
-    category: str
+    category: str # e.g. "Mild Impairment"
+    condition_category: str # e.g. "Miopia", "Hipermetropia", "Astigmatisme"
+    is_cylinder: bool = False
     recommendation: str
 
 class RefractionTestResponse(BaseModel):
@@ -86,3 +91,15 @@ class RefractionAIDetectDistanceResponse(BaseModel):
     face_found: bool
     landmarks: Optional[RefractionAILandmarks] = None
     message: str
+
+class RefractionHistoryItem(BaseModel):
+    id: int
+    created_at: datetime.datetime
+    image_url: str
+    predicted_class: str
+    confidence: float
+    results: RefractionTestResult
+
+class RefractionHistoryResponse(BaseModel):
+    status: str = "success"
+    data: List[RefractionHistoryItem]

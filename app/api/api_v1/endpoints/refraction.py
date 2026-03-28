@@ -57,7 +57,8 @@ async def submit_refraction_test(
     try:
         results = RefractionService.process_screening(
             raw_data=test_request.raw_data,
-            device_info=test_request.device_info
+            device_info=test_request.device_info,
+            test_type=test_request.test_type
         )
         
         # 3. Kirim Notifikasi ke User
