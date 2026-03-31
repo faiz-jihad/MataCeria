@@ -24,7 +24,6 @@ jobs:
           script: |
             REPO="https://${{ secrets.GIT_TOKEN }}@github.com/${{ github.repository }}.git"
             DIR="${{ secrets.VPS_PATH }}"
-            CONTAINER="fastapi_refraksi"
             BRANCH="main"
             
             echo "Checking git..."
@@ -59,20 +58,24 @@ jobs:
             echo "DB_HOST=db" >> .env
             echo "DB_PORT=5432" >> .env
             echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+            echo "REDIS_HOST=redis" >> .env
             echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
             echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
             echo "ALLOWED_ORIGINS=*" >> .env
             
-            echo "Restarting Docker Compose..."
-            docker compose down
+            echo "Restarting Docker Compose (Scaling & Load Balancing)..."
+            # Pulung any new base images
+            docker compose pull
+            # Rebuild and start replicas
             docker compose up -d --build
             
             echo "Waiting for services to be ready..."
-            sleep 10
+            sleep 15
             
-            echo "Running database initialization/seeding..."
-            docker exec $CONTAINER python -m scripts.seed_data || echo "Seeding failed or already exists"
-            docker exec $CONTAINER python -m scripts.seed_articles || echo "Article seeding failed"
-            docker exec $CONTAINER python -m scripts.seed_regional_data || echo "Regional data seeding failed"
+            echo "Running database migrations/seeding via API replica..."
+            # Use 'exec -T api' to run command in one of the active API replicas
+            docker compose exec -T api python -m scripts.seed_data || echo "Seeding failed or already exists"
+            docker compose exec -T api python -m scripts.seed_articles || echo "Article seeding failed"
+            docker compose exec -T api python -m scripts.seed_regional_data || echo "Regional data seeding failed"
             
-            echo "Deployment Finished Successfully! 👁️✨"
+            echo "Deployment Finished Successfully! 🦾👁️✨"

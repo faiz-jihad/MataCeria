@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from typing import List
 import logging
@@ -10,6 +11,9 @@ from app.utils import notify_all_users
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Import templates from core module to avoid circular imports
+from app.core.templates import templates
 
 @router.get("/stats/overview")
 async def get_admin_stats(
@@ -33,6 +37,29 @@ async def get_admin_stats(
             "total_admins": admin_count
         }
     }
+
+@router.get("/dashboard", response_class=HTMLResponse)
+async def get_admin_dashboard(
+    request: Request,
+    db: Session = Depends(get_db)
+    # admin: models.User = Depends(get_current_admin) # Optional: Enable for security
+):
+    """
+    Render halaman dashboard utama dalam format HTML.
+    """
+    user_count = db.query(models.User).filter(models.User.role == models.UserRole.USER).count()
+    test_count = db.query(models.RiwayatTes).count()
+    article_count = db.query(models.Article).count()
+    admin_count = db.query(models.User).filter(models.User.role == models.UserRole.ADMIN).count()
+    
+    data = {
+        "total_users": user_count,
+        "total_tests": test_count,
+        "total_articles": article_count,
+        "total_admins": admin_count
+    }
+    
+    return templates.TemplateResponse("admin_dashboard.html", {"request": request, "data": data})
 
 @router.get("/users", response_model=List[schemas.UserResponse])
 async def list_users(

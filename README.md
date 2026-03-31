@@ -1,93 +1,75 @@
-# MataCeria Backend 👁️✨
+# MataCeria Backend 👁️✨ (V2 Production)
 
 [![MataCeria CI](https://github.com/faiz-jihad/MataCeria/actions/workflows/ci.yml/badge.svg)](https://github.com/faiz-jihad/MataCeria/actions)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Sistem backend cerdas berbasis AI untuk **MataCeria** — aplikasi asisten kesehatan mata pintar dan deteksi dini refraksi (Miopia). Dirancang dengan arsitektur **Clean & Modular**, backend ini menghadirkan pengalaman AI yang responsif dan skalabel untuk skala produksi.
-
----
-
-## 🚀 Fitur Utama & Pembaruan Produksi
-
-- 🧬 **Hybrid AI Refraction (V2)**: Gabungan model **TensorFlow** (Local) dan **Gemini Vision 1.5 Flash** (Fallback) untuk hasil analisis mata yang dinamis dan akurat.
-- 📱 **Mobile-First Synchronization**: 
-    - **Nested History JSON**: Struktur ringkas untuk sinkronisasi riwayat pemeriksaan yang lebih cepat di Flutter.
-    - **Partial Profile Sync**: Pembaruan profil yang fleksibel (PATCH behavior) untuk data kependudukan dan riwayat kesehatan mata.
-- 💬 **AI Consultation (Gemini v2)**: Chatbot medis berbasis LLM terintegrasi untuk bimbingan kesehatan mata.
-- 🗺️ **National Data Hub**: Database 65+ rumah sakit mata nasional dan 20+ artikel kesehatan mata premium siap guna.
-- 🛡️ **Production Ready**: 
-    - **Modular Structure**: Pemisahan Model, Schema, dan Endpoint untuk maintainability tinggi.
-    - **Security Headers**: Proteksi bawaan terhadap XSS, Clickjacking, dan HSTS.
-    - **Rate Limiting**: Pencegahan abuse API menggunakan SlowAPI.
-- 🔄 **CI/CD Pipeline**: Integrasi otomatis melalui **GitHub Actions** untuk linting, testing, dan build verification.
+Sistem backend cerdas berbasis AI untuk **MataCeria** — Platform asisten kesehatan mata pintar dan deteksi dini refraksi (Miopia). Dirancang untuk skalabilitas tinggi, keamanan berlapis, dan efisiensi sumber daya maksimal.
 
 ---
 
-## 📂 Struktur Proyek Baru
+## 🏗️ 1. ARSITEKTUR SISTEM (HIGH LEVEL)
 
-```text
-.
-├── app/                # Core application (FastAPI)
-│   ├── api/            # API Routers (V1 & V2)
-│   ├── core/           # Config, Security, Logging
-│   ├── db/             # Database session & models init
-│   ├── models/         # Modular SQLAlchemy Models
-│   ├── schemas/        # Modular Pydantic Schemas
-│   └── services/       # Business Logic & AI Inference
-├── scripts/            # Utility scripts (Seeding, Migrasi, Tools)
-├── tests/              # Automated API & Unit Tests
-├── docs/               # Technical Guides & API Endpoints
-├── uploads/            # Persistent storage for images
-└── Docker-compose.yaml # Production deployment config
+Sistem MataCeria V2 mengimplementasikan pola **Micro-instance Auto-scaling** yang didukung oleh Nginx sebagai Load Balancer.
+
+```mermaid
+graph TD
+    Client((Mobile/Web)) -->|Port 8000| Nginx[Nginx Load Balancer]
+    Nginx -->|Proxy| API_Group[API Replica Pool x4]
+    API_Group -->|Auth & Shared State| Redis[(Redis - Distributed Sync)]
+    API_Group -->|Persistence| Postgres[(PostgreSQL - Database)]
+    API_Group -->|Fallthrough AI| Gemini[Google Gemini AI 1.5]
+    
+    Monitoring[Prometheus & Grafana] -->|Scrape| API_Group
 ```
 
 ---
 
-## 🚀 Cara Instalasi & Menjalankan
+## 🚀 2. FITUR UNGGULAN PRODUKSI
 
-### 1. Persiapan File Environment
-Buat file `.env` di root folder (gunakan `.env.example` sebagai referensi):
-```env
-DB_USER=user_admin
-DB_PASSWORD=password_kuat
-DB_NAME=db_refraksi
-GEMINI_API_KEY=AIzaSy...
-SECRET_KEY=...
-```
-
-### 2. Jalankan Sistem (Docker)
-Sistem menggunakan *Multi-stage Build* untuk efisiensi produksi:
-```bash
-docker-compose up --build -d
-```
-
-### 3. Inisialisasi Data (WAJIB!)
-Gunakan perintah modular untuk mengisi database awal:
-```bash
-# Isi Data Dasar (Admin, RS, & Artikel)
-docker exec -it fastapi_refraksi python -m scripts.seed_data
-
-# Isi Data Nasional & Premium (RS Mata & Artikel)
-docker exec -it fastapi_refraksi python -m scripts.seed_national_data
-```
+- 🧬 **Hybrid AI Inference**: Mendukung **ONNX Runtime** (Ultra-Lightweight) untuk performa inferensi 10x lebih cepat dan hemat RAM.
+- ⚖️ **Dynamic Scalability**: Berjalan secara paralel dalam 4 kontainer untuk menjamin ketersediaan layanan (*High Availability*).
+- 🛡️ **Hardened Security**: Penutupan port publik (DB/Redis), proteksi HSTS, dan penggunaan *Non-Root User* di Docker.
+- 🚄 **Distributed Rate Limiting**: Sinkronisasi pembatasan trafik global antar replika menggunakan Redis.
 
 ---
 
-## 🧪 Pengujian & Verifikasi
+## 📖 3. PUSAT DOKUMENTASI (PRODUCTION-GRADE)
 
-Untuk menjalankan pengujian otomatis:
-```bash
-docker exec -it fastapi_refraksi pytest tests/
-```
+Dokumentasi lengkap untuk berbagai kebutuhan operasional tersedia di folder `docs/`:
+
+| Dokumen | Target Pembaca | Konten Utama |
+| :--- | :--- | :--- |
+| **[Developer Guide](docs/DEVELOPMENT_GUIDE.md)** | Developer Backend | Onboarding, Standards, Local Setup, & Testing. |
+| **[API Guide](docs/API_GUIDE.md)** | Developer Mobile | Detil Endpoint V1/V2, Skema JSON, & Errors. |
+| **[Operations Guide](docs/OPERATIONS_GUIDE.md)** | DevOps / Admin | Scaling, Nginx, Infrastructure, & CI/CD. |
+| **[Maintenance Guide](docs/MAINTENANCE_GUIDE.md)** | SysAdmin / Security | Backup, Recovery, Log, & Security Hardening. |
 
 ---
 
-## 📖 Dokumentasi Lanjutan
+## ⚙️ 4. CARA INSTALASI CEPAT
 
-- **API Docs (Swagger)**: `http://localhost:8000/docs`
-- **Laporan Proyek Detil**: Lihat `docs/project_report.md` untuk rincian mekanisme AI dan proposal teknis.
-- **Health Check**: `http://localhost:8000/health`
+1. **Persiapan Environmet**:
+   ```bash
+   cp .env.example .env
+   ```
+2. **Jalankan Sistem**:
+   ```bash
+   docker compose up -d --build
+   ```
+3. **Inisialisasi Data Dasar (WAJIB)**:
+   ```bash
+   docker compose exec -T api python -m scripts.seed_data
+   docker compose exec -T api python -m scripts.seed_regional_data
+   ```
+
+---
+
+## 🧪 PENGUJIAN & MONITORING
+- **Unit & Integration Test**: `docker compose exec -T api pytest tests/`
+- **Dashboard Grafana**: `http://localhost:3001` (admin/admin)
+- **API Swagger Docs**: `http://localhost:8000/docs`
 
 ---
 Developed with ❤️ by the MataCeria Team.

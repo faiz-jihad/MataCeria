@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     def SQLALCHEMY_DATABASE_URL(self) -> str:
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
+    # Konfigurasi Redis
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    
+    @property
+    def REDIS_URL(self) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
+
     # Konfigurasi CORS
     ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "*")
 

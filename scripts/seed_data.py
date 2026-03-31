@@ -25,7 +25,7 @@ def seed_data():
         role=models.UserRole.ADMIN,
         profile_image="uploads/profiles/default_admin.png",
         is_2fa_enabled=True,
-        phone_number="08123456789",
+        phone="08123456789",
         vision_type="Normal",
         vision_concerns=["Lelah", "Kering"]
     )

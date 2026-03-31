@@ -17,3 +17,7 @@ google-generativeai
 slowapi
 requests
 prometheus-fastapi-instrumentator
+jinja2
+redis
+hiredis
+onnxruntime

@@ -17,12 +17,22 @@ try:
     TF_AVAILABLE = True
 except ImportError:
     TF_AVAILABLE = False
-    logger.warning("TensorFlow is not installed. AI Inference will run in dummy mode.")
+    logger.warning("TensorFlow is not installed.")
+
+# Try importing ONNX Runtime for lightweight inference
+try:
+    import onnxruntime as ort
+    ONNX_AVAILABLE = True
+except ImportError:
+    ONNX_AVAILABLE = False
+    logger.warning("ONNX Runtime is not installed.")
 
 class AIRefractionService:
     # Model cache
-    _model = None
+    _tf_model = None
+    _onnx_session = None
     _model_loaded = False
+    _engine = None # 'tf', 'onnx', or None
     
     # Classification map
     CLASS_MAPPING = {
@@ -34,27 +44,37 @@ class AIRefractionService:
 
     @classmethod
     def load_model(cls):
-        """Load TF/Keras model once into memory."""
+        """Load ONNX (preferred) or TF model once into memory."""
         if cls._model_loaded:
-            return cls._model
+            return cls._engine
             
-        if not TF_AVAILABLE:
-            return None
+        # 1. Try ONNX (Ultra-Lightweight)
+        onnx_path = os.getenv("AI_MODEL_ONNX_PATH", "model_miopia.onnx")
+        if ONNX_AVAILABLE and os.path.exists(onnx_path):
+            try:
+                cls._onnx_session = ort.InferenceSession(onnx_path)
+                cls._engine = "onnx"
+                logger.info(f"Using Ultra-Lightweight ONNX engine with {onnx_path}")
+                cls._model_loaded = True
+                return cls._engine
+            except Exception as e:
+                logger.error(f"Error loading ONNX model: {e}")
 
-        model_path = os.getenv("AI_MODEL_PATH", "model_miopia.h5")
-        try:
-            if os.path.exists(model_path):
-                cls._model = tf.keras.models.load_model(model_path)
-                logger.info(f"Loaded AI model from {model_path}")
-            else:
-                logger.warning(f"AI Model not found at {model_path}. Inference will be simulated.")
-                cls._model = None
-        except Exception as e:
-            logger.error(f"Error loading AI model: {e}")
-            cls._model = None
-            
+        # 2. Fallback to TensorFlow (Heavyweight)
+        tf_path = os.getenv("AI_MODEL_PATH", "model_miopia.h5")
+        if TF_AVAILABLE and os.path.exists(tf_path):
+            try:
+                cls._tf_model = tf.keras.models.load_model(tf_path)
+                cls._engine = "tf"
+                logger.info(f"Using Heavyweight TensorFlow engine with {tf_path}")
+                cls._model_loaded = True
+                return cls._engine
+            except Exception as e:
+                logger.error(f"Error loading TF model: {e}")
+
+        logger.warning("No local AI models found. Falling back to rule-based or Cloud AI.")
         cls._model_loaded = True
-        return cls._model
+        return None
 
     @staticmethod
     def decode_and_preprocess_image(base64_string: str) -> np.ndarray:
@@ -113,25 +133,37 @@ class AIRefractionService:
         rule_class = cls.get_rule_based_class(decimal_acuity)
 
         # --- 3. AI MODEL INFERENCE ---
-        model = cls.load_model()
+        engine = cls.load_model()
         ai_class = 0
         ai_confidence = 0.0
         source = "rule_based_fallback"
         
-        if model is not None:
+        if engine == "onnx":
+            try:
+                # Prepare input for ONNX
+                input_name = cls._onnx_session.get_inputs()[0].name
+                outputs = cls._onnx_session.run(None, {input_name: image_tensor.astype(np.float32)})
+                probabilities = outputs[0][0]
+                ai_class = int(np.argmax(probabilities))
+                ai_confidence = float(probabilities[ai_class])
+                source = "hybrid_model_onnx"
+            except Exception as e:
+                logger.error(f"ONNX Inference error: {e}")
+                engine = None # Force fallback
+        
+        if engine == "tf":
             try:
                 # Output: probability per class e.g. [0.1, 0.7, 0.1, 0.1]
-                preds = model.predict(image_tensor, verbose=0)
+                preds = cls._tf_model.predict(image_tensor, verbose=0)
                 probabilities = preds[0]
                 ai_class = int(np.argmax(probabilities))
                 ai_confidence = float(probabilities[ai_class])
-                source = "hybrid_model"
+                source = "hybrid_model_tf"
             except Exception as e:
-                logger.error(f"Inference error: {e}")
-                # Fallback to rule if AI fails during predict
-                ai_class = rule_class
-                ai_confidence = 1.0
-        else:
+                logger.error(f"TF Inference error: {e}")
+                engine = None # Force fallback
+
+        if engine is None:
             # --- GEMINI VISION FALLBACK (Dynamic AI) ---
             from app.core.config import settings
             import google.generativeai as genai
