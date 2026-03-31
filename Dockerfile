@@ -18,7 +18,7 @@ ENV PYTHONUNBUFFERED 1
 
 COPY --from=builder /app/wheels /wheels
 COPY --from=builder /app/requirements.txt .
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Hapus instalasi curl yang memakan banyak memori, gunakan urllib.request untuk healthcheck
 RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
 
 COPY . .

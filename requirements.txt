@@ -16,3 +16,4 @@ gunicorn==21.2.0
 google-generativeai
 slowapi
 requests
+prometheus-fastapi-instrumentator

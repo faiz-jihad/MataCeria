@@ -134,7 +134,7 @@ async def process_hybrid_ai_refraction(
             new_record = models.RiwayatTes(
                 user_id=int(test_request.user_id) if test_request.user_id.isdigit() else 0,
                 image_path=image_path,
-                hasil_klasifikasi=results.predicted_class,
+                hasil_klasifikasi=f"{results.predicted_class} ({results.condition_category})",
                 estimasi_dioptri=results.visual_acuity, # Simpan snellen fraction sebagai estimasi sementara
                 confidence_score=results.confidence,
                 catatan_admin=f"AI Recommendation: {results.recommendation}"

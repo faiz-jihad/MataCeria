@@ -12,6 +12,7 @@ from app.db.base import init_db
 from app.core.ratelimit import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Initialize Logging
 logger = setup_logging()
@@ -25,6 +26,9 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     description="Sistem AI Refraksi Mata"
 )
+
+# Initialize Prometheus Instrumentator
+Instrumentator().instrument(app).expose(app)
 
 # Throttling configuration
 app.state.limiter = limiter
@@ -95,6 +99,7 @@ async def health_check():
 @app.get("/", tags=["Root"])
 async def root():
     return {
-        "message": "Selamat datang di API Refraksi Mata.",
+        "status": "ok",
+        "message": "Selamat datang di API Refraksi Mata V2 ",
         "docs": "/docs"
     }

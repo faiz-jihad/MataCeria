@@ -51,6 +51,8 @@ class RefractionAISnellenData(BaseModel):
     smallest_row_read: int
     missed_chars: int
     response_time: float
+    test_type: str = "distance_vision" # "distance_vision" or "near_vision"
+    astigmatism_found: bool = False
 
 class RefractionAIImageData(BaseModel):
     eye_frame_base64: str
@@ -65,6 +67,8 @@ class RefractionAIResultDetail(BaseModel):
     visual_acuity: str
     snellen_decimal: float
     predicted_class: str
+    condition_category: str # "Miopia", "Hipermetropia", "Astigmatisme"
+    is_cylinder: bool = False
     confidence: float
     recommendation: str
     action_required: bool
