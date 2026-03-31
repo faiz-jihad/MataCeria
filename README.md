@@ -1,4 +1,4 @@
-# MataCeria Backend 👁️✨ (V2 Production)
+# MataCeria Backend 
 
 [![MataCeria CI](https://github.com/faiz-jihad/MataCeria/actions/workflows/ci.yml/badge.svg)](https://github.com/faiz-jihad/MataCeria/actions)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
@@ -9,7 +9,7 @@ Sistem backend cerdas berbasis AI untuk **MataCeria** — Platform asisten keseh
 
 ---
 
-## 🏗️ 1. ARSITEKTUR SISTEM (HIGH LEVEL)
+##  1. ARSITEKTUR SISTEM 
 
 Sistem MataCeria V2 mengimplementasikan pola **Micro-instance Auto-scaling** yang didukung oleh Nginx sebagai Load Balancer.
 
