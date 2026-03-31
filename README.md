@@ -35,7 +35,7 @@ graph TD
 
 ---
 
-## 📖 3. PUSAT DOKUMENTASI (PRODUCTION-GRADE)
+## 📖 3. PUSAT DOKUMENTASI 
 
 Dokumentasi lengkap untuk berbagai kebutuhan operasional tersedia di folder `docs/`:
 
@@ -58,7 +58,7 @@ Dokumentasi lengkap untuk berbagai kebutuhan operasional tersedia di folder `doc
    ```bash
    docker compose up -d --build
    ```
-3. **Inisialisasi Data Dasar (WAJIB)**:
+3. **Inisialisasi Data Dasar (Dummy)**:
    ```bash
    docker compose exec -T api python -m scripts.seed_data
    docker compose exec -T api python -m scripts.seed_regional_data
