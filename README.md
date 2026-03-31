@@ -19,7 +19,7 @@ graph TD
     Nginx -->|Proxy| API_Group[API Replica Pool x4]
     API_Group -->|Auth & Shared State| Redis[(Redis - Distributed Sync)]
     API_Group -->|Persistence| Postgres[(PostgreSQL - Database)]
-    API_Group -->|Fallthrough AI| Gemini[Google Gemini AI 1.5]
+    API_Group -->|Fallthrough AI| Gemini[Google Gemini AI 2.5]
     
     Monitoring[Prometheus & Grafana] -->|Scrape| API_Group
 ```
